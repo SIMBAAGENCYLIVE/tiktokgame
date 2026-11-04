@@ -66,6 +66,14 @@ function connectTo(name) {
     broadcast({ type: 'gift', user: data.uniqueId, giftName: data.giftName, diamonds });
   }));
 
+  current.on('chat', forward((data) => {
+    broadcast({ type: 'chat', user: data.uniqueId, text: data.comment });
+  }));
+
+  current.on('member', forward((data) => {
+    broadcast({ type: 'member', user: data.uniqueId });
+  }));
+
   current.on('like', forward((data) => {
     broadcast({ type: 'like', user: data.uniqueId, count: data.likeCount || 1 });
   }));

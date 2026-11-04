@@ -17,6 +17,7 @@
   --line: #d9deea;
   --accent: #e8590c;
   --accent-fg: #ffffff;
+  --ok: #1f7a46;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +29,7 @@
     --line: #2a3042;
     --accent: #ff8a3d;
     --accent-fg: #14100b;
+    --ok: #46d68a;
     color-scheme: dark;
   }
 }
@@ -39,6 +41,7 @@
   --line: #2a3042;
   --accent: #ff8a3d;
   --accent-fg: #14100b;
+    --ok: #46d68a;
   color-scheme: dark;
 }
 
@@ -141,6 +144,14 @@ input:focus-visible, select:focus-visible, .btn:focus-visible, .back:focus-visib
 .top a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
 .row .field { flex: 1 1 200px; }
+.header-side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.badge {
+  font: 600 12px/1 "IBM Plex Sans", system-ui, sans-serif; padding: 7px 10px; border-radius: 99px;
+  border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+}
+.badge[data-state="on"] { color: var(--ok); border-color: var(--ok); }
+.badge[data-state="wait"] { color: var(--accent); border-color: var(--accent); }
+.feed { max-height: 320px; overflow: auto; color: var(--fg); }
 html.is-overlay, html.is-overlay body { background: transparent; }
 html.is-overlay body { padding: 0; }
 html.is-overlay .panel-ui { display: none; }
@@ -161,7 +172,10 @@ html.is-overlay .back { display: inline-block; }
       <h1>Arène de ballons</h1>
       <p class="note" id="status">Simulation : les événements sont fictifs.</p>
     </div>
-    <a href="#overlay">Mode overlay</a>
+    <div class="header-side">
+      <span class="badge" id="liveBadge" data-state="off">Simulation</span>
+      <a href="#overlay">Mode overlay</a>
+    </div>
   </header>
 
   <div class="main">
@@ -204,6 +218,11 @@ html.is-overlay .back { display: inline-block; }
     </section>
 
     <aside class="col" aria-label="Tableau des scores">
+      <div class="card panel-ui">
+        <h2>Flux du live</h2>
+        <ul class="list feed" id="feed"></ul>
+        <p class="empty" id="feedEmpty">Aucun événement reçu. Lance la connexion avec un pseudo.</p>
+      </div>
       <div class="card">
         <h2>Scores</h2>
         <div id="board"></div>
@@ -583,6 +602,9 @@ document.getElementById('connectBtn').addEventListener('click', () => {
   const name = document.getElementById('tiktokUser').value;
   if (!sendToBridge({ type: 'connect', user: name })) {
     setStatus('Programme de liaison introuvable : la simulation reste active.');
+    setBadge('off', 'Simulation');
+  } else {
+    setBadge('wait', 'Connexion…');
   }
 });
 
@@ -633,6 +655,45 @@ function setStatus(text) {
   if (el) el.textContent = text;
 }
 
+function setBadge(state, label) {
+  const b = document.getElementById('liveBadge');
+  if (!b) return;
+  b.dataset.state = state;
+  b.textContent = label;
+}
+
+// Déduit le voyant du texte de statut envoyé par le programme.
+function badgeFromStatus(text) {
+  if (text.startsWith('Connecté')) setBadge('on', 'Connecté au live');
+  else if (text.startsWith('Connexion')) setBadge('wait', 'Connexion…');
+  else setBadge('off', 'Non connecté');
+}
+
+function addFeed(d) {
+  let text = '';
+  if (d.type === 'gift') {
+    text = `cadeau · @${d.user} · ${d.giftName} (${d.diamonds} diamant${d.diamonds > 1 ? 's' : ''})`;
+  } else if (d.type === 'like') {
+    text = `likes · @${d.user} · +${d.count}`;
+  } else if (d.type === 'chat') {
+    text = `chat · @${d.user} : ${d.text}`;
+  } else if (d.type === 'member') {
+    text = `arrivée · @${d.user}`;
+  } else if (d.type === 'status') {
+    text = `statut · ${d.text}`;
+  } else {
+    return;
+  }
+  const ul = document.getElementById('feed');
+  const li = document.createElement('li');
+  const s = document.createElement('span');
+  s.textContent = `${new Date().toLocaleTimeString('fr-FR')}  ${text}`;
+  li.appendChild(s);
+  ul.prepend(li);
+  while (ul.children.length > 60) ul.lastChild.remove();
+  document.getElementById('feedEmpty').hidden = true;
+}
+
 // Chaque viewer est rattaché à une équipe de façon stable, à partir de son pseudo.
 function teamFor(name) {
   let h = 0;
@@ -661,12 +722,17 @@ function connectBridge() {
   socket = ws;
   ws.onopen = () => {
     setAuto(false);
-    setStatus('Connecté au programme local : en attente du live.');
+    setStatus('Programme joint : entre un pseudo pour te connecter au live.');
+    setBadge('wait', 'Programme joint');
   };
   ws.onmessage = (msg) => {
     let d;
     try { d = JSON.parse(msg.data); } catch (e) { return; }
-    if (d.type === 'status') setStatus(d.text);
+    if (d.type === 'status') {
+      setStatus(d.text);
+      badgeFromStatus(d.text);
+    }
+    addFeed(d);
     if (d.type === 'gift') {
       onEvent({
         type: 'gift',
@@ -681,6 +747,7 @@ function connectBridge() {
   };
   ws.onclose = () => {
     socket = null;
+    setBadge('off', 'Simulation');
     setStatus('Simulation : le programme de liaison n\'est pas lancé.');
     if (!autoTimer) setAuto(true);
   };
