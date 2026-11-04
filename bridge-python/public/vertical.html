@@ -3,14 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Arène verticale</title>
+<title>La Cour des Lumières</title>
 <style>
 /* Format 9:16 pour un live TikTok. En mode #overlay, seul le rendu reste visible. */
-:root { --bg: #eef1f6; --panel: #ffffff; --fg: #131722; --muted: #5a6276; --line: #d9deea; --accent: #e8590c; color-scheme: light; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
+/* Palette commune aux deux arènes. */
+:root {
+  --bg: #0b0d17;
+  --panel: #131827;
+  --fg: #f4f6ff;
+  --muted: #aab5cf;
+  --line: #30394f;
+  --accent: #a7f3d0;
+  --accent-fg: #10251e;
+  --ok: #a7f3d0;
+  color-scheme: dark;
 }
-:root[data-theme="dark"] { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0; background: var(--bg); color: var(--fg);
@@ -20,8 +28,10 @@ body {
   padding-block: 16px;
 }
 .wrap { max-width: 460px; margin: 0 auto; min-width: 0; }
-.stage { width: 100%; aspect-ratio: 9 / 16; background: #07080d; border-radius: 14px; overflow: hidden; }
-.stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+.stage { position: relative; margin-top: 16px; width: 100%; aspect-ratio: 9 / 16; background: #07080d; border-radius: 14px; overflow: hidden; }
+.stage canvas { position: relative; display: block; width: 100%; height: 100%;  }
+
+.stage-art { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 12px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -33,9 +43,9 @@ input[type="text"] {
 }
 .btn {
   font: inherit; font-weight: 600; min-height: 44px; padding: 8px 14px; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); 
 }
-.btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .status { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 
@@ -43,28 +53,221 @@ html.is-overlay, html.is-overlay body { background: transparent; padding: 0; }
 html.is-overlay .panel { display: none; }
 html.is-overlay .wrap { max-width: none; }
 html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
+
+body {
+  background: radial-gradient(ellipse at top, #202440, transparent 42rem), var(--bg);
+  min-height: 100vh;
+}
+.top { border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+.kicker { color: var(--accent); font-weight: 700; letter-spacing: .16em; }
+.stage { border: 1px solid #414c68; box-shadow: 0 18px 45px #05061180; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary:hover { background: #d1fae5; }
+.nav-link {
+  display: inline-block; padding: 7px 12px; border-radius: 99px;
+  border: 1px solid var(--line); color: var(--fg); text-decoration: none;
+}
+.nav-link:hover { border-color: var(--accent); }
+html.is-overlay .stage { border: 0; box-shadow: none; }
+
+.top { display: grid; gap: 10px; margin-bottom: 16px; }
+.kicker { margin: 0; text-transform: uppercase; font-size: 11px; }
+h1 { margin: 0; font-size: clamp(24px, 7vw, 36px); line-height: 1.1; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel h2 { margin: 0 0 12px; font-size: 15px; }
+.status { overflow-wrap: anywhere; }
+html.is-overlay .top { display: none; }
+html.is-overlay .stage {
+  width: min(100vw, 56.25vh);
+  height: auto;
+  aspect-ratio: 9 / 16;
+  margin: auto;
+}
+
+.game-settings {
+  display: grid; gap: 10px; margin: 16px 0 0; padding: 12px;
+  border: 1px solid var(--line); border-radius: 10px; min-width: 0;
+}
+.game-settings legend { font-weight: 700; }
+.game-settings label { text-transform: none; letter-spacing: normal; }
+.game-settings input[type="number"] {
+  width: 6em; min-height: 36px; padding: 4px 8px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit;
+}
+.wrap { max-width: 1440px; }
+.dashboard {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(310px, 370px);
+  gap: 20px; align-items: start;
+}
+.preview, .sidebar { min-width: 0; }
+.preview-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.preview-bar h2 { margin: 0 auto 0 0; font-size: 17px; }
+.btn { cursor: pointer; }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.sidebar { display: grid; gap: 14px; }
+.sidebar .panel { margin: 0; }
+.stage {
+  width: min(100%, 48vh); margin-inline: auto;
+  background: radial-gradient(ellipse at center, #233760, #111728 72%);
+}
+.stage.is-wide { width: 100%; aspect-ratio: 16 / 9; }
+.scene { position: absolute; inset: 0; }
+.stage-art-wide, .is-wide .stage-art-portrait { display: none; }
+.is-wide .stage-art-wide { display: block; }
+.feed { padding: 0; margin: 10px 0 0; list-style: none; max-height: 320px; overflow: auto; }
+.feed li { border-top: 1px solid var(--line); padding: 8px 0; overflow-wrap: anywhere; }
+.feed time { color: var(--muted); font-size: 12px; margin-right: 8px; }
+@media (min-width: 761px) {
+  html:not(.is-overlay) .wrap {
+    display: flex; flex-direction: column;
+    height: calc(100dvh - 32px);
+  }
+  html:not(.is-overlay) .dashboard { flex: 1; min-height: 0; align-items: stretch; }
+  html:not(.is-overlay) .preview { display: flex; flex-direction: column; min-height: 0; container-type: size; }
+  html:not(.is-overlay) .preview-bar { flex: none; }
+  html:not(.is-overlay) .stage { flex: none; width: min(100%, max(1px, calc((100cqh - 70px) * .5625))); }
+  html:not(.is-overlay) .stage.is-wide { width: min(100%, max(1px, calc((100cqh - 70px) * 1.777778))); }
+  html:not(.is-overlay) .sidebar { align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
+}
+@media (max-width: 760px) {
+  .dashboard { grid-template-columns: minmax(0, 1fr); }
+}
+html.is-overlay .dashboard { display: block; }
+html.is-overlay .preview-bar, html.is-overlay .sidebar { display: none; }
+html.is-overlay .stage.is-wide {
+  width: min(100vw, 177.7778vh); height: auto; aspect-ratio: 16 / 9;
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="stage"><canvas id="c" width="1080" height="1920" role="img" aria-label="Arène verticale : les viewers tournent autour de la pierre centrale"></canvas></div>
+  <header class="top">
+    <p class="kicker">Arène Live</p>
+    <h1>La Cour des Lumières</h1>
+    <nav class="nav" aria-label="Modes d’affichage">
+      <a class="nav-link" id="overlayLink" href="#overlay">Mode overlay</a>
+    </nav>
+  </header>
 
-  <div class="panel">
-    <div class="row">
-      <div class="field">
-        <label for="user">Pseudo TikTok (sans @)</label>
-        <input id="user" type="text" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+  <main class="dashboard">
+    <section class="preview" aria-label="Aperçu de l’arène">
+      <div class="preview-bar">
+        <h2>Aperçu</h2>
+        <button class="btn" id="portraitBtn" type="button" aria-pressed="true">9:16</button>
+        <button class="btn" id="landscapeBtn" type="button" aria-pressed="false">16:9</button>
       </div>
-      <button class="btn primary" id="connectBtn" type="button">Connecter</button>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="simBtn" type="button">Simuler</button>
-      <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)">
-        <input id="voice" type="checkbox"> Voix de remerciement
-      </label>
-    </div>
-    <p class="status" id="status">Non connecté.</p>
-  </div>
+      <div class="stage" id="stage">
+        <div class="scene">
+    <svg class="stage-art stage-art-portrait" viewBox="0 0 1080 1920" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="sky" x2="0%" y2="100%">
+          <stop stop-color="#113c92"/>
+          <stop offset=".34" stop-color="#4c92d5"/>
+          <stop offset=".62" stop-color="#ffdb9f"/>
+          <stop offset="1" stop-color="#f7974f"/>
+        </linearGradient>
+        <linearGradient id="court" x2="0%" y2="100%">
+          <stop stop-color="#b1c5e6"/>
+          <stop offset=".58" stop-color="#eff7ff"/>
+          <stop offset="1" stop-color="#d5e1f1"/>
+        </linearGradient>
+        <pattern id="marble" width="34" height="34" patternUnits="userSpaceOnUse">
+          <path d="M17 0 34 17 17 34 0 17Z" fill="none" stroke="#607ea6" stroke-opacity=".24"/>
+          <circle cx="17" cy="17" r="2" fill="#789bc7" opacity=".3"/>
+        </pattern>
+        <pattern id="arches" width="84" height="100" patternUnits="userSpaceOnUse">
+          <rect width="84" height="100" fill="#f7d294"/>
+          <path d="M10 100V48a32 32 0 0 1 64 0v52Z" fill="#e9a756" stroke="#fff0c9" stroke-width="6"/>
+          <path d="M2 0v100" stroke="#fff6df" stroke-width="5"/>
+        </pattern>
+        <g id="tower" fill="#fff0cc" stroke="#c79852" stroke-width="3">
+          <path d="M-11 204V49h22v155Z M-17 49 0 7l17 42Z"/>
+          <circle cy="0" r="7" fill="none" stroke="#ffdf8d"/>
+          <path d="M-19 84h38 M-19 132h38" stroke-width="6"/>
+        </g>
+      </defs>
+      <rect width="1080" height="690" fill="url(#sky)"/>
+      <circle cx="885" cy="370" r="94" fill="#ffefb5" opacity=".18"/>
+      <circle cx="885" cy="370" r="63" fill="#fff4ce" opacity=".82"/>
+      <path d="M0 145c140-42 259-35 406-70M676 134c179 22 290-16 404-35" fill="none" stroke="#ffe1bb" stroke-width="18" opacity=".19"/>
+      <use href="#tower" x="105" y="245"/>
+      <use href="#tower" x="975" y="245"/>
+      <use href="#tower" transform="translate(245 350) scale(.72)"/>
+      <use href="#tower" transform="translate(835 350) scale(.72)"/>
+      <path d="M0 444h1080v248H0z" fill="#f7d294"/>
+      <path d="M0 456h1080v100H0z M0 565h1080v100H0z" fill="url(#arches)"/>
+      <path d="M0 450h1080M0 559h1080M0 666h1080" stroke="#fff5d9" stroke-width="9"/>
+      <rect y="674" width="1080" height="1246" fill="url(#court)"/>
+      <rect y="674" width="1080" height="1246" fill="url(#marble)"/>
+      <ellipse cx="540" cy="1150" rx="520" ry="333" fill="#f4f9ff" stroke="#c0d3eb" stroke-width="5"/>
+    </svg>
+    <svg class="stage-art stage-art-wide" viewBox="0 0 1920 1080" aria-hidden="true" focusable="false">
+      <rect width="1920" height="330" fill="url(#sky)"/>
+      <circle cx="1590" cy="180" r="96" fill="#ffefb5" opacity=".18"/>
+      <circle cx="1590" cy="180" r="63" fill="#fff4ce" opacity=".82"/>
+      <path d="M0 104c190-55 325-36 470-70m980 56c150-12 315-57 470-57" fill="none" stroke="#ffe1bb" stroke-width="17" opacity=".19"/>
+      <use href="#tower" transform="translate(160 48) scale(.94)"/>
+      <use href="#tower" transform="translate(1760 48) scale(.94)"/>
+      <use href="#tower" transform="translate(440 97) scale(.64)"/>
+      <use href="#tower" transform="translate(1480 97) scale(.64)"/>
+      <rect y="225" width="1920" height="115" fill="url(#arches)"/>
+      <path d="M0 225h1920M0 338h1920" stroke="#fff5d9" stroke-width="8"/>
+      <rect y="342" width="1920" height="738" fill="url(#court)"/>
+      <rect y="342" width="1920" height="738" fill="url(#marble)"/>
+      <ellipse cx="960" cy="591" rx="490" ry="275" fill="#f4f9ff" stroke="#c0d3eb" stroke-width="5"/>
+    </svg>
+    <canvas id="c" width="1080" height="1920" role="img" aria-label="La Cour des Lumières : les participants tournent autour de la pierre centrale"></canvas>
+        </div>
+      </div>
+    </section>
+    <aside class="sidebar" aria-label="Réglages et flux">
+      <section class="panel">
+        <h2>Flux des interactions</h2>
+        <p class="status" id="feedStatus" role="status">TikTok déconnecté.</p>
+        <ol class="feed" id="feed" aria-label="Interactions récentes"></ol>
+      </section>
+      <section class="panel configuration">
+        <h2>Configuration</h2>
+        <fieldset class="game-settings">
+          <legend>Titres de l’arène</legend>
+          <label for="arenaTitle">Titre principal</label>
+          <input id="arenaTitle" type="text" maxlength="64" placeholder="La Cour des Lumières">
+          <label for="arenaSubtitle">Sous-titre</label>
+          <input id="arenaSubtitle" type="text" maxlength="120" placeholder="Commente et tapote pour te rapprocher du centre">
+        </fieldset>
+        <div class="row">
+          <div class="field">
+            <label for="user">Pseudo TikTok (sans @)</label>
+            <input id="user" type="text" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+          </div>
+          <button class="btn primary" id="connectBtn" type="button">Connecter</button>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="simBtn" type="button">Simuler</button>
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)">
+            <input id="voice" type="checkbox"> Voix de remerciement
+          </label>
+        </div>
+        <fieldset class="game-settings">
+          <legend>Points et présence</legend>
+          <label><input id="showScores" type="checkbox" checked> Afficher les points des participants</label>
+          <label><input id="showEffectPoints" type="checkbox" checked> Afficher les points associés aux effets</label>
+          <label for="idleMinutes">Retirer un personnage après
+            <input id="idleMinutes" type="number" min="1" max="120" step="1" value="5"> min sans interaction
+          </label>
+        </fieldset>
+        <fieldset class="game-settings">
+          <legend>Barème des points</legend>
+          <label>Par tapotage <input id="tapPoints" type="number" min="0" max="10000" step="0.01" value="0.1"></label>
+          <label>Parfum <input id="perfumePoints" type="number" min="0" max="10000" step="1" value="5"></label>
+          <label>Eau <input id="waterPoints" type="number" min="0" max="10000" step="1" value="25"></label>
+          <label>Brume <input id="mistPoints" type="number" min="0" max="10000" step="1" value="50"></label>
+          <label>Pluie de lumière <input id="lightPoints" type="number" min="0" max="10000" step="1" value="250"></label>
+        </fieldset>
+        <p class="status" id="status">Non connecté.</p>
+      </section>
+    </aside>
+  </main>
 </div>
 
 <script>
@@ -73,22 +276,62 @@ html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
    ================================================================== */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const W = 1080, H = 1920;
-const CX = 540, CY = 1180;             // centre de l'arène
+let W = 1080, H = 1920;
+let CX = 540, CY = 1150;             // centre de l'arène
 const R_OUT = 430, R_IN = 140;         // anneau extérieur (débutants) et intérieur (meilleurs)
 const Y_SQUASH = 0.55;                 // aplatissement de l'anneau pour l'effet perspective
 const MAX_CHARS = 80;
 const TIERS = [                        // effets par valeur de cadeau (en diamants)
-  { min: 50, name: 'Pluie de lumière', color: '#fff6c8' },
-  { min: 10, name: 'Brume',            color: '#cfe6ff' },
-  { min: 5,  name: 'Eau',              color: '#5ec8ff' },
-  { min: 1,  name: 'Parfum',           color: '#ffd166' },
+  { min: 50, icon: 'light', pointsKey: 'lightPoints', name: 'Pluie de lumière', color: '#fff6c8' },
+  { min: 10, icon: 'mist', pointsKey: 'mistPoints', name: 'Brume',            color: '#cfe6ff' },
+  { min: 5, icon: 'water', pointsKey: 'waterPoints', name: 'Eau',              color: '#5ec8ff' },
+  { min: 1, icon: 'perfume', pointsKey: 'perfumePoints', name: 'Parfum',           color: '#ffd166' },
 ];
 const SIM_NAMES = ['Lina', 'Max', 'Yanis', 'Océane', 'Tom', 'Inès', 'Léo', 'Sami', 'Zoé', 'Nina'];
 
 /* ==================================================================
    État
    ================================================================== */
+const settings = {
+  showScores: true,
+  showEffectPoints: true,
+  idleMinutes: 5,
+  tapPoints: 0.1,
+  perfumePoints: 5,
+  waterPoints: 25,
+  mistPoints: 50,
+  lightPoints: 250,
+};
+const titleFields = {
+  arenaTitle: 'La Cour des Lumières',
+  arenaSubtitle: 'Commente et tapote pour te rapprocher du centre',
+};
+const titleInputs = {};
+for (const [id, fallback] of Object.entries(titleFields)) {
+  const input = document.getElementById(id);
+  const storageKey = `arene-live.${id}`;
+  titleInputs[id] = input;
+  try { input.value = localStorage.getItem(storageKey) ?? fallback; }
+  catch { input.value = fallback; }
+  input.addEventListener('input', () => {
+    try { localStorage.setItem(storageKey, input.value); } catch {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key === storageKey) input.value = event.newValue ?? fallback;
+  });
+}
+const formatPoints = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format;
+for (const key of Object.keys(settings)) {
+  const input = document.getElementById(key);
+  input.addEventListener('change', () => {
+    if (typeof settings[key] === 'number') {
+      if (input.value && input.validity.valid) settings[key] = input.valueAsNumber;
+      input.value = settings[key];
+    } else {
+      settings[key] = input.checked;
+    }
+  });
+}
 const chars = new Map();     // pseudo -> personnage
 const images = new Map();    // url -> { img, ok }
 let particles = [];
@@ -141,7 +384,8 @@ function ensureChar(user, avatar) {
     c = {
       user, avatar: avatar || '', score: 0, r: R_OUT,
       angle: Math.random() * Math.PI * 2,
-      speed: (0.10 + Math.random() * 0.08) * (Math.random() < 0.5 ? 1 : -1),
+      stride: Math.random() * Math.PI * 2,
+      speed: 0.10 + Math.random() * 0.08,
       hue: hueOf(user), bubble: '', bubbleUntil: 0,
     };
     chars.set(user, c);
@@ -153,6 +397,7 @@ function ensureChar(user, avatar) {
   } else if (avatar && !c.avatar) {
     c.avatar = avatar;
   }
+  c.lastActive = performance.now();
   return c;
 }
 
@@ -164,23 +409,35 @@ function targetRadius(c) {
 /* ==================================================================
    Effets de cadeaux
    ================================================================== */
-function spawn(p) {
-  particles.push(Object.assign({ vx: 0, vy: 0, g: 0, life: 1, max: 1, size: 6, color: '#fff' }, p));
-}
+let groundRipples = [];
 
-function effectFor(diamonds) {
-  if (diamonds >= 50) {
-    for (let i = 0; i < 140; i++) spawn({ x: Math.random() * W, y: -20, vy: 500 + Math.random() * 400, life: 2.5, max: 2.5, size: 3, color: '#fff6c8' });
-  } else if (diamonds >= 10) {
-    for (let i = 0; i < 30; i++) spawn({ x: CX + (Math.random() - 0.5) * 520, y: CY + (Math.random() - 0.5) * 360, vx: (Math.random() - 0.5) * 60, vy: -20, life: 2, max: 2, size: 30 + Math.random() * 40, color: 'rgba(220,235,255,0.25)' });
-  } else if (diamonds >= 5) {
-    for (let i = 0; i < 60; i++) spawn({ x: Math.random() * W, y: -10, vy: 350 + Math.random() * 200, g: 300, life: 2, max: 2, size: 5, color: '#5ec8ff' });
-  } else {
-    for (let i = 0; i < 25; i++) {
-      const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 160;
-      spawn({ x: CX, y: CY, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1.2, max: 1.2, size: 4, color: '#ffd166' });
-    }
+function effectFor(diamonds, character) {
+  const x = Math.cos(character.angle) * character.r;
+  const z = Math.sin(character.angle) * character.r;
+  const kind = diamonds >= 50 ? 'light' : diamonds >= 10 ? 'mist' : diamonds >= 5 ? 'water' : 'perfume';
+  if (kind === 'water' || kind === 'perfume') {
+    if (groundRipples.length >= 24) groundRipples.shift();
+    groundRipples.push({ x, z, life: 1.4, kind });
   }
+  const count = { light: 54, mist: 16, water: 13, perfume: 16 }[kind];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spread = kind === 'light' ? 410 : kind === 'mist' ? 135 : 24;
+    const radius = Math.sqrt(Math.random()) * spread;
+    const life = 0.9 + Math.random() * 1.15;
+    const light = kind === 'light';
+    particles.push({
+      kind, life, max: life,
+      x: (light ? 0 : x) + Math.cos(angle) * radius,
+      z: (light ? 0 : z) + Math.sin(angle) * radius,
+      height: light ? 135 + Math.random() * 290 : 6 + Math.random() * 20,
+      vx: kind === 'mist' ? 24 + Math.random() * 20 : Math.cos(angle) * 12,
+      vz: Math.sin(angle) * 10,
+      vy: light ? -160 - Math.random() * 135 : kind === 'water' ? 60 : 24,
+      size: Math.random(),
+    });
+  }
+  if (particles.length > 280) particles = particles.slice(-280);
 }
 
 function tierFor(diamonds) {
@@ -192,25 +449,27 @@ function tierFor(diamonds) {
    ================================================================== */
 function update(dt, now) {
   for (const c of chars.values()) {
-    c.angle += c.speed * dt;
-    c.r += (targetRadius(c) - c.r) * Math.min(1, dt * 2);
+    if (now - c.lastActive >= settings.idleMinutes * 60_000) {
+      chars.delete(c.user);
+      continue;
+    }
+    const turn = c.speed * dt;
+    const drift = (targetRadius(c) - c.r) * Math.min(1, dt * 1.2);
+    c.angle -= turn;
+    c.r += drift;
+    c.stride = (c.stride + Math.hypot(c.r * turn, drift) * Math.PI * 2 / 52) % (Math.PI * 2);
   }
-  for (const p of particles) {
-    p.life -= dt;
-    p.vy += p.g * dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
+  for (const particle of particles) {
+    particle.life -= dt;
+    particle.x += particle.vx * dt;
+    particle.z += particle.vz * dt;
+    particle.height += particle.vy * dt;
+    if (particle.kind === 'water') particle.vy -= 145 * dt;
   }
-  particles = particles.filter((p) => p.life > 0 && p.y < H + 50);
+  particles = particles.filter((particle) => particle.life > 0 && particle.height > 0);
   welcomes = welcomes.filter((w) => now < w.until);
-}
-
-function drawBackground() {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#0d1020');
-  g.addColorStop(1, '#1b1630');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  for (const ripple of groundRipples) ripple.life -= dt;
+  groundRipples = groundRipples.filter((ripple) => ripple.life > 0);
 }
 
 function drawArena() {
@@ -220,18 +479,12 @@ function drawArena() {
   for (const r of [R_OUT, (R_OUT + R_IN) / 2, R_IN]) {
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,209,102,0.2)';
+    ctx.strokeStyle = '#c6d8ef';
     ctx.lineWidth = 3;
     ctx.stroke();
   }
   ctx.restore();
 
-  // Pierre centrale, neutre, avec un liseré doré
-  ctx.fillStyle = '#1a1a24';
-  ctx.strokeStyle = '#ffd166';
-  ctx.lineWidth = 6;
-  ctx.fillRect(CX - 80, CY - 80, 160, 160);
-  ctx.strokeRect(CX - 80, CY - 80, 160, 160);
 }
 
 function drawAvatar(c, x, y, r) {
@@ -262,13 +515,16 @@ function drawAvatar(c, x, y, r) {
 function drawLabel(text, x, y) {
   ctx.font = '600 22px system-ui, sans-serif';
   const w = ctx.measureText(text).width + 22;
-  ctx.fillStyle = 'rgba(20,16,34,0.82)';
+  ctx.fillStyle = 'rgba(48,25,60,0.94)';
   roundRect(x - w / 2, y, w, 30, 15);
   ctx.fill();
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, x, y + 15);
+  ctx.strokeStyle = '#e8c474';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
 function drawBubble(text, x, y) {
@@ -283,28 +539,247 @@ function drawBubble(text, x, y) {
   ctx.fillText(text, x, y - 40);
 }
 
-function drawCharacters(now) {
-  const list = [...chars.values()].map((c) => ({
-    c,
-    x: CX + Math.cos(c.angle) * c.r,
-    y: CY + Math.sin(c.angle) * c.r * Y_SQUASH,
-  })).sort((a, b) => a.y - b.y);
+/* La caméra projette les volumes du monde (x, hauteur, z) sur l’écran. */
+const cameraTilt = Math.asin(Y_SQUASH);
+const cameraSin = Math.sin(cameraTilt);
+const cameraCos = Math.cos(cameraTilt);
+const cubeFaces = [
+  [0, 4, 5, 1], [1, 5, 6, 2], [3, 2, 6, 7],
+  [0, 3, 7, 4], [4, 7, 6, 5],
+];
 
-  for (const { c, x, y } of list) {
-    const bob = Math.sin(now / 300 + c.angle) * 4;
-    drawAvatar(c, x, y + bob, 28);
-    drawLabel(fitText(c.user, 14), x, y + bob + 34);
-    if (c.bubble && now < c.bubbleUntil) drawBubble(c.bubble, x, y + bob);
+function project(x, height, z) {
+  return {
+    x: CX + x,
+    y: CY + z * cameraSin - height * cameraCos,
+    depth: z * cameraCos + height * cameraSin,
+  };
+}
+
+function addFace(faces, polygon, color) {
+  let area = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i];
+    const b = polygon[(i + 1) % polygon.length];
+    area += a.x * b.y - b.x * a.y;
+  }
+  if (area < 0) {
+    faces.push({
+      polygon, color,
+      depth: polygon.reduce((sum, point) => sum + point.depth, 0) / polygon.length,
+    });
   }
 }
 
-function drawParticles() {
-  for (const p of particles) {
-    ctx.globalAlpha = Math.max(0, p.life / p.max);
-    ctx.fillStyle = p.color;
+function addBox(faces, x, base, z, width, height, length, angle, colors) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const corners = [
+    [-width / 2, -length / 2], [width / 2, -length / 2],
+    [width / 2, length / 2], [-width / 2, length / 2],
+  ];
+  const points = [base, base + height].flatMap((level) => corners.map(([u, v]) =>
+    project(x + u * cos - v * sin, level, z + u * sin + v * cos)));
+  cubeFaces.forEach((indices, index) => addFace(faces, indices.map((i) => points[i]), colors[index]));
+}
+
+function addLathe(faces, x, z, angle, profile, colors) {
+  const sides = 8;
+  const rings = profile.map(([height, radius]) => Array.from({ length: sides }, (_, i) => {
+    const bearing = angle + i * Math.PI * 2 / sides;
+    return project(x + Math.cos(bearing) * radius, height, z + Math.sin(bearing) * radius);
+  }));
+  for (let row = 0; row < rings.length - 1; row++) {
+    for (let i = 0; i < sides; i++) {
+      const j = (i + 1) % sides;
+      const light = Math.cos(angle + (i + 0.5) * Math.PI * 2 / sides - 1.2);
+      const shade = light > 0.5 ? 2 : light < -0.3 ? 0 : 1;
+      addFace(faces, [rings[row][i], rings[row + 1][i], rings[row + 1][j], rings[row][j]], colors[shade]);
+    }
+  }
+}
+
+function addArch(faces, x, z) {
+  const inner = 46;
+  const outer = 59;
+  const spring = 81;
+  const slices = 10;
+  for (let i = 0; i < slices; i++) {
+    const a = i * Math.PI / slices;
+    const b = (i + 1) * Math.PI / slices;
+    const segment = (r, t, depth) => project(x + Math.cos(t) * r, spring + Math.sin(t) * r, depth);
+    const front = [segment(inner, a, z + 19), segment(outer, a, z + 19),
+      segment(outer, b, z + 19), segment(inner, b, z + 19)];
+    const back = [segment(inner, a, z - 19), segment(outer, a, z - 19),
+      segment(outer, b, z - 19), segment(inner, b, z - 19)];
+    addFace(faces, front, i % 2 ? '#ffebc8' : '#efd1a3');
+    addFace(faces, [front[0], front[3], back[3], back[0]], '#b88659');
+    addFace(faces, [front[2], front[1], back[1], back[2]], '#fff3d8');
+  }
+}
+
+function drawGroundRipples() {
+  for (const ripple of groundRipples) {
+    const p = project(ripple.x, 0, ripple.z);
+    const radius = 15 + (1.4 - ripple.life) * 54;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.ellipse(p.x, p.y, radius, radius * cameraSin, 0, 0, Math.PI * 2);
+    ctx.globalAlpha = ripple.life / 1.4;
+    ctx.strokeStyle = ripple.kind === 'water' ? '#438fe2' : '#c18e43';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    if (ripple.kind === 'water' && radius > 29) {
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, radius - 14, (radius - 14) * cameraSin, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawShadow(x, z, radius, opacity) {
+  const p = project(x, 0, z);
+  ctx.fillStyle = `rgba(48,62,88,${opacity})`;
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y, radius * 1.15, radius * cameraSin * 0.58, -0.30, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function addCentralMonument(faces) {
+  const angle = Math.PI / 4;
+  const black = ['#252431', '#292630', '#37313d', '#1c1a24', '#171620'];
+  const gold = ['#aa762d', '#c78f38', '#f2ca72', '#cf9a43', '#fbe2a0'];
+  drawShadow(-36, 43, 154, 0.2);
+  addBox(faces, 0, 0, 0, 167, 13, 167, angle, ['#9aa9be','#b3bfd1','#c4d0df','#91a0b5','#dce4f0']);
+  addBox(faces, 0, 13, 0, 153, 180, 153, angle, black);
+  addBox(faces, 0, 140, 0, 156, 21, 156, angle, gold);
+  for (const side of [-1, 1]) {
+    const trimX = side * 77 * Math.cos(angle);
+    const trimZ = side * 77 * Math.sin(angle);
+    addBox(faces, trimX, 144, trimZ, 2, 2, 154, angle, gold);
+    addBox(faces, trimX, 156, trimZ, 2, 2, 154, angle, gold);
+  }
+  const doorX = 78 * Math.cos(angle) + 23 * Math.sin(angle);
+  const doorZ = 78 * Math.sin(angle) - 23 * Math.cos(angle);
+  addBox(faces, doorX, 26, doorZ, 5, 60, 31, angle, gold);
+  addBox(faces, doorX + 2 * Math.cos(angle), 32, doorZ + 2 * Math.sin(angle),
+    5, 49, 23, angle, ['#81541f','#a47129','#d5a349','#91652a','#f1c770']);
+}
+
+function addWalker(faces, c, x, z) {
+  const phase = c.stride;
+  const swing = Math.sin(phase) * 8;
+  const bob = Math.abs(Math.sin(phase)) * 3;
+  const angle = Math.PI + c.angle;
+  const robe = ['#ced9e7','#dce5ef','#fff8e9','#e7e6e8','#fffdf5'];
+  const skin = ['#ad7962','#bc8870','#e2ad8b','#cb987a','#f0c29f'];
+  for (const side of [-1, 1]) {
+    const footX = x + side * (7 * Math.cos(angle) - swing * Math.sin(angle));
+    const footZ = z + side * (7 * Math.sin(angle) + swing * Math.cos(angle));
+    addBox(faces, footX, Math.max(0, side * swing / 2), footZ, 10, 20, 12, angle, robe);
+    const armX = x + side * (16 * Math.cos(angle) + swing * Math.sin(angle) / 2);
+    const armZ = z + side * (16 * Math.sin(angle) - swing * Math.cos(angle) / 2);
+    addBox(faces, armX, 22 + bob, armZ, 7, 20, 8, angle, robe);
+  }
+  addLathe(faces, x, z, angle, [[15 + bob, 13], [32 + bob, 13], [46 + bob, 10]], ['#bcc9da', '#e6e9eb', '#fff8e9']);
+  addLathe(faces, x, z, angle, [[43 + bob, 4], [48 + bob, 8], [56 + bob, 9], [60 + bob, 7]], [skin[0], skin[1], skin[2]]);
+  addLathe(faces, x, z, angle, [[56 + bob, 9], [63 + bob, 8], [66 + bob, 0]], ['#c5d1df', '#eef1ef', '#fffdf5']);
+  return project(x, 69 + bob, z);
+}
+
+function drawCharacters(now) {
+  const faces = [];
+  const labels = [];
+  const limestone = ['#b78b60', '#d4a67a', '#fae1b7', '#c59565', '#fff0cc'];
+  for (let x = -Math.floor(W / 250) * 125; x <= W / 2; x += 125) {
+    addBox(faces, x, 0, -515, 26, 81, 30, 0, limestone);
+    addBox(faces, x, 0, -515, 40, 12, 42, 0, limestone);
+    addBox(faces, x, 77, -515, 36, 12, 42, 0, limestone);
+    if (x + 62.5 < W / 2) addArch(faces, x + 62.5, -515);
+  }
+  addBox(faces, 0, 140, -515, W, 12, 42, 0, limestone);
+  addCentralMonument(faces);
+  for (const c of chars.values()) {
+    const x = Math.cos(c.angle) * c.r;
+    const z = Math.sin(c.angle) * c.r;
+    drawShadow(x - 15, z + 16, 20, 0.19);
+    const recent = 1 - (now - c.lastActive) / 3300;
+    if (recent > 0) {
+      const foot = project(x, 0, z);
+      ctx.beginPath();
+      ctx.ellipse(foot.x, foot.y, 25, 25 * cameraSin, 0, 0, Math.PI * 2);
+      ctx.globalAlpha = recent * 0.78;
+      ctx.strokeStyle = '#d9a348';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    const head = addWalker(faces, c, x, z);
+    labels.push({ c, head, z });
+  }
+  faces.sort((a, b) => a.depth - b.depth);
+  for (const { polygon, color } of faces) {
+    ctx.beginPath();
+    ctx.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i++) ctx.lineTo(polygon[i].x, polygon[i].y);
+    ctx.closePath();
+    ctx.fillStyle = color;
     ctx.fill();
+  }
+
+  labels.sort((a, b) => b.c.lastActive - a.c.lastActive || b.z - a.z);
+  const occupied = [];
+  for (const { c, head, z } of labels) {
+    if (z < 0 && Math.abs(head.x - CX) < 110 && head.y > CY - 208) continue;
+    const crowded = labels.length > 12;
+    if (crowded && (occupied.length >= 8 || now - c.lastActive > 4200)) continue;
+    const name = fitText(c.user, 14);
+    const label = settings.showScores ? `${name} · ${formatPoints(c.score)} pts` : name;
+    const bubble = c.bubble && now < c.bubbleUntil ? c.bubble : '';
+    ctx.font = '600 22px system-ui, sans-serif';
+    const labelWidth = ctx.measureText(label).width + 30;
+    ctx.font = '500 24px system-ui, sans-serif';
+    const bubbleWidth = bubble ? Math.min(420, ctx.measureText(bubble).width + 28) : 0;
+    const halfWidth = Math.max(labelWidth, bubbleWidth) / 2;
+    const x = Math.max(halfWidth + 8, Math.min(W - halfWidth - 8, head.x));
+    const rect = { left: x - halfWidth, right: x + halfWidth, top: head.y - (bubble ? 92 : 34), bottom: head.y + 4 };
+    if (occupied.some((other) => rect.left < other.right && rect.right > other.left &&
+      rect.top < other.bottom && rect.bottom > other.top)) continue;
+    occupied.push(rect);
+    drawLabel(label, x, head.y - 34);
+    if (bubble) drawBubble(bubble, x, head.y - 32);
+  }
+}
+
+function drawParticles(behind) {
+  for (const p of particles) {
+    if ((p.z < 0) !== behind) continue;
+    const point = project(p.x, p.height, p.z);
+    const alpha = p.life / p.max;
+    if (p.kind === 'mist') {
+      const radius = 22 + p.size * 38 + (1 - alpha) * 21;
+      const fog = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+      fog.addColorStop(0, '#d6e8fc');
+      fog.addColorStop(1, '#d6e8fc00');
+      ctx.globalAlpha = alpha * 0.62;
+      ctx.fillStyle = fog;
+      ctx.fillRect(point.x - radius, point.y - radius, radius * 2, radius * 2);
+      continue;
+    }
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    if (p.kind === 'light') {
+      ctx.strokeStyle = '#f5c569';
+      ctx.lineWidth = 2 + p.size * 2;
+      ctx.moveTo(point.x, point.y);
+      ctx.lineTo(point.x - 5, point.y - 20 - p.size * 24);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = p.kind === 'water' ? '#6ac6ff' : '#dfac4e';
+      ctx.arc(point.x, point.y, 2 + p.size * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -312,24 +787,27 @@ function drawParticles() {
 function drawHeader() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffd166';
+  ctx.fillStyle = '#ffe1a0';
   ctx.font = '800 64px system-ui, sans-serif';
-  ctx.fillText('ARÈNE DU LIVE', W / 2, 90);
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.shadowColor = '#26335c';
+  ctx.shadowBlur = 12;
+  ctx.fillText(titleInputs.arenaTitle.value.trim(), W / 2, wide ? 84 : 145, W - 96);
+  ctx.fillStyle = '#fff4dc';
   ctx.font = '500 26px system-ui, sans-serif';
-  ctx.fillText('Commente, like et envoie des cadeaux pour monter vers la pierre', W / 2, 150);
+  ctx.fillText(titleInputs.arenaSubtitle.value.trim(), W / 2, wide ? 143 : 204, W - 80);
+  ctx.shadowBlur = 0;
 }
 
 function drawLeaderboard() {
   const top = [...chars.values()].sort((a, b) => b.score - a.score).slice(0, 5);
-  const x = 40, y = 200, w = 470, rowH = 76;
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  const x = 40, y = wide ? 215 : 295, w = wide ? 420 : 470, rowH = 66;
+  ctx.fillStyle = 'rgba(48,25,60,0.90)';
   roundRect(x, y, w, 70 + rowH * 5, 18);
   ctx.fill();
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffd166';
+  ctx.fillStyle = '#ffe1a0';
   ctx.font = '700 26px system-ui, sans-serif';
   ctx.fillText('CLASSEMENT', x + 24, y + 36);
 
@@ -339,21 +817,21 @@ function drawLeaderboard() {
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';
     ctx.font = '600 26px system-ui, sans-serif';
-    ctx.fillText(`${i + 1}. ${fitText(c.user, 16)}`, x + 94, ry);
+    ctx.fillText(`${i + 1}. ${fitText(c.user, 16)}`, x + 94, ry, w - 190);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffd166';
+    ctx.fillStyle = '#ffe1a0';
     ctx.font = '700 26px system-ui, sans-serif';
-    ctx.fillText(String(Math.floor(c.score)), x + w - 24, ry);
+    if (settings.showScores) ctx.fillText(formatPoints(c.score), x + w - 24, ry);
   });
 }
 
 function drawWelcomes(now) {
-  const x = W - 40, w = 470;
+  const x = W - 40, w = wide ? 420 : 470;
   welcomes.slice(-3).forEach((wel, i) => {
-    const y = 200 + i * 70;
+    const y = (wide ? 215 : 295) + i * 70;
     const alpha = Math.min(1, (wel.until - now) / 800);
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillStyle = 'rgba(48,25,60,0.90)';
     roundRect(x - w, y, w, 56, 14);
     ctx.fill();
     ctx.textAlign = 'left';
@@ -368,45 +846,126 @@ function drawWelcomes(now) {
 function drawGiftBanner(now) {
   if (!banner || now >= banner.until) return;
   ctx.fillStyle = banner.color;
-  roundRect(40, H - 440, W - 80, 84, 18);
+  const width = wide ? 860 : W - 80;
+  const y = wide ? 750 : H - 440;
+  roundRect((W - width) / 2, y, width, 84, 18);
   ctx.fill();
   ctx.fillStyle = '#131722';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = '700 32px system-ui, sans-serif';
-  ctx.fillText(banner.text, W / 2, H - 398);
+  ctx.fillText(banner.text, W / 2, y + 42, width - 48);
 }
 
-function drawTierTable() {
-  const x = 40, y = H - 320, w = W - 80, h = 280;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(x, y, w, h, 20);
+function drawEffectIcon(icon, x, y) {
+  const paint = (top, bottom) => {
+    const gradient = ctx.createLinearGradient(x, y - 22, x, y + 22);
+    gradient.addColorStop(0, top);
+    gradient.addColorStop(1, bottom);
+    return gradient;
+  };
+  const ellipse = (dx, dy, rx, ry, color) => {
+    ctx.beginPath();
+    ctx.ellipse(x + dx, y + dy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  const polygon = (points, color) => {
+    ctx.beginPath();
+    ctx.moveTo(x + points[0][0], y + points[0][1]);
+    for (const [dx, dy] of points.slice(1)) ctx.lineTo(x + dx, y + dy);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  const spark = (dx, dy, size, color) => polygon([
+    [dx, dy - size], [dx + size * .24, dy - size * .24], [dx + size, dy],
+    [dx + size * .24, dy + size * .24], [dx, dy + size], [dx - size * .24, dy + size * .24],
+    [dx - size, dy], [dx - size * .24, dy - size * .24],
+  ], color);
+
+  if (icon === 'perfume') {
+    ellipse(0, 20, 21, 4, '#10091c80');
+    roundRect(x - 15, y - 10, 30, 30, 7);
+    ctx.fillStyle = paint('#fff0b5', '#c46922');
+    ctx.fill();
+    roundRect(x - 12, y - 3, 24, 19, 5);
+    ctx.fillStyle = paint('#ffd884', '#a34b24');
+    ctx.fill();
+    roundRect(x - 7, y - 20, 14, 10, 3);
+    ctx.fillStyle = paint('#fff4d3', '#b48549');
+    ctx.fill();
+    spark(0, 7, 6, '#fff2b3');
+    spark(18, -13, 5, '#ffdb81');
+  } else if (icon === 'water') {
+    ellipse(0, 20, 20, 4, '#10091c80');
+    ctx.beginPath();
+    ctx.moveTo(x, y - 22);
+    ctx.bezierCurveTo(x + 6, y - 12, x + 17, y - 2, x + 17, y + 7);
+    ctx.bezierCurveTo(x + 17, y + 26, x - 17, y + 26, x - 17, y + 7);
+    ctx.bezierCurveTo(x - 17, y - 2, x - 6, y - 12, x, y - 22);
+    ctx.fillStyle = paint('#d9fbff', '#257cdd');
+    ctx.fill();
+    ellipse(-7, 3, 4, 7, '#e7ffffc7');
+    spark(16, -10, 5, '#c5f8ff');
+  } else if (icon === 'mist') {
+    const cloud = paint('#fcf8ff', '#a29cd6');
+    ellipse(0, 10, 23, 9, '#8676b5');
+    ellipse(-11, 2, 11, 9, cloud);
+    ellipse(2, -4, 13, 13, cloud);
+    ellipse(13, 3, 10, 9, cloud);
+    ellipse(-4, 11, 20, 5, '#e9deff');
+    ellipse(8, 19, 16, 2, '#bdb1e8');
+  } else {
+    polygon([[-10, 9], [-2, -17], [1, -14], [-5, 11]], '#ffd56999');
+    polygon([[5, 14], [14, -14], [18, -12], [10, 16]], '#ffbd5299');
+    spark(-6, 10, 14, paint('#fff7c8', '#e49437'));
+    spark(12, -8, 11, '#fff0a2');
+    spark(18, 12, 5, '#ffcf69');
+  }
+}
+
+function drawParticipation() {
+  const y = H - (wide ? 234 : 270);
+  ctx.fillStyle = 'rgba(48,25,60,0.90)';
+  roundRect(40, y, W - 80, 220, 20);
   ctx.fill();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffd166';
-  ctx.font = '700 28px system-ui, sans-serif';
-  ctx.fillText('EFFETS DES CADEAUX', W / 2, y + 40);
+  ctx.fillStyle = '#ffe1a0';
+  ctx.font = '700 30px system-ui, sans-serif';
+  ctx.fillText('COMMENT PARTICIPER', W / 2, y + 42);
+  ctx.fillStyle = '#fff4dc';
+  ctx.font = '600 27px system-ui, sans-serif';
+  ctx.fillText(`1 commentaire = 1 pt    ·    1 tapotage = ${formatPoints(settings.tapPoints)} pt`, W / 2, y + 86, W - 128);
 
-  const cols = [...TIERS].reverse();
-  const colW = (w - 40) / cols.length;
-  cols.forEach((t, i) => {
-    const cx = x + 20 + colW * i + colW / 2;
-    ctx.fillStyle = t.color;
-    ctx.beginPath();
-    ctx.arc(cx, y + 116, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 22px system-ui, sans-serif';
-    ctx.fillText(t.name, cx, y + 170);
-    ctx.fillStyle = 'rgba(255,255,255,0.65)';
-    ctx.font = '500 20px system-ui, sans-serif';
-    ctx.fillText(`${t.min}+ diamants`, cx, y + 204);
+  ctx.fillStyle = '#ffe1a0';
+  ctx.font = '700 23px system-ui, sans-serif';
+  ctx.fillText('EFFETS VISUELS', W / 2, y + 139);
+  ctx.font = '600 23px system-ui, sans-serif';
+  [...TIERS].reverse().forEach((tier, i) => {
+    ctx.fillStyle = tier.color;
+    const x = W * (i + 0.5) / TIERS.length;
+    const labelWidth = Math.min(160, ctx.measureText(tier.name).width);
+    drawEffectIcon(tier.icon, x - labelWidth / 2 - 4, y + 174);
+    ctx.fillText(tier.name, x + 22, y + 174, 160);
+    if (settings.showEffectPoints) {
+      ctx.fillText(`${formatPoints(settings[tier.pointsKey])} pts`, x, y + 203);
+    }
   });
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '500 20px system-ui, sans-serif';
-  ctx.fillText('Chat : 1 point · Like : 0,1 point · Cadeau : 5 points par diamant', W / 2, y + 258);
+}
+
+function drawPresence() {
+  const x = W - (wide ? 460 : 510), y = wide ? 435 : 515;
+  ctx.fillStyle = 'rgba(48,25,60,0.90)';
+  roundRect(x, y, wide ? 420 : 470, 68, 18);
+  ctx.fill();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe1a0';
+  ctx.font = '700 24px system-ui, sans-serif';
+  ctx.fillText(`PRÉSENTS · ${chars.size}`, x + 24, y + 34);
 }
 
 function drawStatus() {
@@ -414,19 +973,22 @@ function drawStatus() {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '500 20px system-ui, sans-serif';
-  ctx.fillText(statusText, 40, 16);
+  ctx.fillText(statusText, 40, 16, W - 80);
 }
 
 function draw(now) {
-  drawBackground();
+  ctx.clearRect(0, 0, W, H);
   drawArena();
+  drawGroundRipples();
+  drawParticles(true);
   drawCharacters(now);
-  drawParticles();
+  drawParticles(false);
   drawHeader();
   drawLeaderboard();
   drawWelcomes(now);
+  drawPresence();
   drawGiftBanner(now);
-  drawTierTable();
+  drawParticipation();
   drawStatus();
 }
 
@@ -449,7 +1011,36 @@ function speak(text) {
   speechSynthesis.speak(u);
 }
 
-function onEvent(d) {
+function setConnectionStatus(text) {
+  statusText = text;
+  document.getElementById('status').textContent = text;
+  document.getElementById('feedStatus').textContent = text;
+}
+
+const feed = document.getElementById('feed');
+const feedClock = new Intl.DateTimeFormat('fr-FR', { timeStyle: 'medium' });
+
+function addFeed(d, simulated) {
+  let detail;
+  switch (d.type) {
+    case 'chat': detail = `Commentaire · ${d.text}`; break;
+    case 'like': detail = `Tapotages · ${d.count || 1}`; break;
+    case 'member': detail = 'Arrivée dans le live'; break;
+    case 'gift': detail = `Cadeau reçu · ${d.giftName}`; break;
+    default: return;
+  }
+  const row = document.createElement('li');
+  const time = document.createElement('time');
+  const now = new Date();
+  time.dateTime = now.toISOString();
+  time.textContent = feedClock.format(now);
+  row.append(time, `${simulated ? '[Simulation] ' : ''}${d.user} · ${detail}`);
+  feed.prepend(row);
+  if (feed.children.length > 40) feed.lastElementChild.remove();
+}
+
+function onEvent(d, simulated = true) {
+  addFeed(d, simulated);
   const now = performance.now();
   if (d.type === 'chat') {
     const c = ensureChar(d.user, d.avatar);
@@ -457,20 +1048,20 @@ function onEvent(d) {
     c.bubble = fitText(d.text, 40);
     c.bubbleUntil = now + 3500;
   } else if (d.type === 'like') {
-    ensureChar(d.user, d.avatar).score += 0.1 * (d.count || 1);
+    ensureChar(d.user, d.avatar).score += settings.tapPoints * (d.count || 1);
   } else if (d.type === 'member') {
     ensureChar(d.user, d.avatar);
     welcomes.push({ text: `Bienvenue ${d.user}`, until: now + 4500 });
   } else if (d.type === 'gift') {
     const diamonds = d.diamonds || 1;
     const tier = tierFor(diamonds);
-    ensureChar(d.user, d.avatar).score += diamonds * 5;
-    effectFor(diamonds);
+    const character = ensureChar(d.user, d.avatar);
+    character.score += settings[tier.pointsKey];
+    effectFor(diamonds, character);
     banner = { text: `${d.user} · ${d.giftName} ×${diamonds}`, until: now + 4000, color: tier.color };
     speak(`Merci ${d.user} pour ton cadeau`);
   } else if (d.type === 'status') {
-    statusText = d.text;
-    document.getElementById('status').textContent = d.text;
+    setConnectionStatus(d.text);
   }
 }
 
@@ -485,9 +1076,12 @@ function connectBridge() {
     socket = new WebSocket(`${proto}://${location.host}/ws`);
   } catch (e) { return; }
   socket.onmessage = (msg) => {
-    try { onEvent(JSON.parse(msg.data)); } catch (e) { /* message ignoré */ }
+    try { onEvent(JSON.parse(msg.data), false); } catch (e) { /* message ignoré */ }
   };
-  socket.onclose = () => { socket = null; };
+  socket.onclose = () => {
+    socket = null;
+    setConnectionStatus('Programme de liaison déconnecté.');
+  };
 }
 
 document.getElementById('connectBtn').addEventListener('click', () => {
@@ -495,7 +1089,7 @@ document.getElementById('connectBtn').addEventListener('click', () => {
   if (socket && socket.readyState === 1) {
     socket.send(JSON.stringify({ type: 'connect', user }));
   } else {
-    document.getElementById('status').textContent = 'Programme de liaison introuvable. Ouvre la page depuis le programme.';
+    setConnectionStatus('Programme de liaison introuvable. Ouvre la page depuis le programme.');
   }
 });
 
@@ -519,8 +1113,35 @@ document.getElementById('simBtn').addEventListener('click', () => {
   }, 700);
 });
 
+const stage = document.getElementById('stage');
+const portraitBtn = document.getElementById('portraitBtn');
+const landscapeBtn = document.getElementById('landscapeBtn');
+const overlayLink = document.getElementById('overlayLink');
+let wide = false;
+
+function setFormat(useWide) {
+  if (wide !== useWide) {
+    wide = useWide;
+    W = wide ? 1920 : 1080;
+    H = wide ? 1080 : 1920;
+    const nextCY = wide ? 591 : 1150;
+    CX = W / 2;
+    CY = nextCY;
+    canvas.width = W;
+    canvas.height = H;
+  }
+  stage.classList.toggle('is-wide', wide);
+  portraitBtn.setAttribute('aria-pressed', String(!wide));
+  landscapeBtn.setAttribute('aria-pressed', String(wide));
+  overlayLink.href = wide ? '#overlay-16-9' : '#overlay';
+}
+portraitBtn.addEventListener('click', () => setFormat(false));
+landscapeBtn.addEventListener('click', () => setFormat(true));
+
 function syncOverlay() {
-  document.documentElement.classList.toggle('is-overlay', location.hash === '#overlay');
+  const overlay = location.hash === '#overlay' || location.hash === '#overlay-16-9';
+  document.documentElement.classList.toggle('is-overlay', overlay);
+  if (overlay) setFormat(location.hash === '#overlay-16-9');
 }
 window.addEventListener('hashchange', syncOverlay);
 
