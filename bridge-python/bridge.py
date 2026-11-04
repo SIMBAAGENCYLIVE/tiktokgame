@@ -102,8 +102,15 @@ async def connect_to(name):
         except asyncio.CancelledError:
             raise
         except Exception as err:
-            print("Connexion impossible :", err)
-            await broadcast({"type": "status", "text": f"Pas de live en cours pour @{username}"})
+            # Le message exact est aussi écrit dans les logs Render.
+            import traceback
+            traceback.print_exc()
+            kind = type(err).__name__
+            if "Offline" in kind:
+                text = f"Pas de live en cours pour @{username}"
+            else:
+                text = f"Erreur de connexion ({kind}) : {err}"
+            await broadcast({"type": "status", "text": text})
 
     await broadcast({"type": "status", "text": f"Connexion à @{username}…"})
     current_task = asyncio.create_task(run())
