@@ -140,6 +140,7 @@ input:focus-visible, select:focus-visible, .btn:focus-visible, .back:focus-visib
 }
 .top a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
+.row .field { flex: 1 1 200px; }
 html.is-overlay, html.is-overlay body { background: transparent; }
 html.is-overlay body { padding: 0; }
 html.is-overlay .panel-ui { display: none; }
@@ -168,6 +169,17 @@ html.is-overlay .back { display: inline-block; }
       <div class="stage">
         <canvas id="stage" role="img" aria-label="Arène : les ballons de chaque équipe"></canvas>
         <a class="back" href="#">Retour au panneau</a>
+      </div>
+
+      <div class="card panel-ui">
+        <h2>Live TikTok</h2>
+        <div class="row">
+          <div class="field">
+            <label for="tiktokUser">Pseudo TikTok (sans @)</label>
+            <input id="tiktokUser" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+          </div>
+          <button class="btn primary" id="connectBtn" type="button">Connecter</button>
+        </div>
       </div>
 
       <div class="card panel-ui">
@@ -567,6 +579,13 @@ document.getElementById('likeBtn').addEventListener('click', () => {
 
 document.getElementById('resetBtn').addEventListener('click', resetAll);
 
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const name = document.getElementById('tiktokUser').value;
+  if (!sendToBridge({ type: 'connect', user: name })) {
+    setStatus('Programme de liaison introuvable : la simulation reste active.');
+  }
+});
+
 let autoTimer = null;
 function pickGift() {
   const total = GIFTS.reduce((s, g) => s + g.weight, 0);
@@ -621,6 +640,16 @@ function teamFor(name) {
   return h % TEAMS.length;
 }
 
+let socket = null;
+
+function sendToBridge(obj) {
+  if (socket && socket.readyState === 1) {
+    socket.send(JSON.stringify(obj));
+    return true;
+  }
+  return false;
+}
+
 function connectBridge() {
   let ws;
   try {
@@ -629,6 +658,7 @@ function connectBridge() {
   } catch (e) {
     return;
   }
+  socket = ws;
   ws.onopen = () => {
     setAuto(false);
     setStatus('Connecté au programme local : en attente du live.');
@@ -650,7 +680,8 @@ function connectBridge() {
     }
   };
   ws.onclose = () => {
-    setStatus('Simulation : le programme local n\'est pas lancé.');
+    socket = null;
+    setStatus('Simulation : le programme de liaison n\'est pas lancé.');
     if (!autoTimer) setAuto(true);
   };
 }

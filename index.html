@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Arène de ballons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;800&display=swap">
+<style>
+/* Layout: the arena leads, the scoreboard sits beside it on wide screens, controls come last.
+   Overlay mode (#overlay) keeps only the arena, on a transparent background. */
+:root {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --fg: #131722;
+  --muted: #5a6276;
+  --line: #d9deea;
+  --accent: #e8590c;
+  --accent-fg: #ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0e14;
+    --panel: #161a25;
+    --fg: #eceff6;
+    --muted: #9aa3b8;
+    --line: #2a3042;
+    --accent: #ff8a3d;
+    --accent-fg: #14100b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0e14;
+  --panel: #161a25;
+  --fg: #eceff6;
+  --muted: #9aa3b8;
+  --line: #2a3042;
+  --accent: #ff8a3d;
+  --accent-fg: #14100b;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px;
+}
+
+.wrap { max-width: 1080px; margin: 0 auto; min-width: 0; }
+
+.top {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px; min-width: 0;
+}
+.kicker {
+  margin: 0 0 4px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+h1 {
+  margin: 0; font-family: "Unbounded", system-ui, sans-serif; font-weight: 800;
+  font-size: clamp(22px, 4vw, 30px); letter-spacing: -.01em; text-wrap: balance;
+}
+.note { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+
+.main { display: grid; gap: 16px; min-width: 0; }
+@media (min-width: 900px) {
+  .main { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+}
+.col { display: grid; gap: 16px; min-width: 0; align-content: start; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px; min-width: 0;
+}
+.card h2 {
+  margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* The arena is a dark screen on purpose, in both themes. */
+.stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%;
+  background: #07080d; border-radius: 14px; overflow: hidden; min-width: 0;
+}
+.stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+.back {
+  display: none; position: absolute; top: 10px; right: 10px; z-index: 2;
+  font: 600 12px/1 "IBM Plex Sans", sans-serif; color: #fff; background: rgba(0,0,0,.55);
+  padding: 8px 10px; border-radius: 8px; text-decoration: none;
+}
+
+/* Scoreboard */
+.team { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; }
+.team:first-child { border-top: 0; padding-top: 0; }
+.thead { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
+.tname { display: flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; }
+.swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--tc); flex: none; }
+.score {
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700;
+  font-size: 20px; font-variant-numeric: tabular-nums;
+}
+.bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--tc); transition: width .35s ease; }
+.meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.list li { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+.list li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.list li span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.log { max-height: 180px; overflow: auto; color: var(--muted); }
+.empty { color: var(--muted); margin: 0; font-size: 13px; }
+
+/* Controls */
+.fields { display: grid; gap: 10px; grid-template-columns: 1fr; min-width: 0; }
+@media (min-width: 560px) { .fields { grid-template-columns: 1fr 1fr; } }
+.field { display: grid; gap: 4px; min-width: 0; }
+label { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+input, select {
+  font: inherit; min-height: 44px; min-width: 0; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%;
+}
+.gifts { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+.btn {
+  font: inherit; font-weight: 600; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer;
+  text-align: left; min-width: 0;
+}
+.btn small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.btn[aria-pressed="true"] { border-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.row .btn { text-align: center; }
+input:focus-visible, select:focus-visible, .btn:focus-visible, .back:focus-visible, .top a:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.top a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+.row .field { flex: 1 1 200px; }
+html.is-overlay, html.is-overlay body { background: transparent; }
+html.is-overlay body { padding: 0; }
+html.is-overlay .panel-ui { display: none; }
+html.is-overlay .wrap { max-width: none; }
+html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
+html.is-overlay .back { display: inline-block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar i { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top panel-ui">
+    <div>
+      <p class="kicker">Jeu interactif · live</p>
+      <h1>Arène de ballons</h1>
+      <p class="note" id="status">Simulation : les événements sont fictifs.</p>
+    </div>
+    <a href="#overlay">Mode overlay</a>
+  </header>
+
+  <div class="main">
+    <section class="col" aria-label="Arène">
+      <div class="stage">
+        <canvas id="stage" role="img" aria-label="Arène : les ballons de chaque équipe"></canvas>
+        <a class="back" href="#">Retour au panneau</a>
+      </div>
+
+      <div class="card panel-ui">
+        <h2>Live TikTok</h2>
+        <div class="row">
+          <div class="field">
+            <label for="tiktokUser">Pseudo TikTok (sans @)</label>
+            <input id="tiktokUser" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+          </div>
+          <button class="btn primary" id="connectBtn" type="button">Connecter</button>
+        </div>
+      </div>
+
+      <div class="card panel-ui">
+        <h2>Simuler un événement</h2>
+        <div class="fields">
+          <div class="field">
+            <label for="user">Pseudo du viewer</label>
+            <input id="user" maxlength="24" value="Viewer 1" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="team">Équipe</label>
+            <select id="team"></select>
+          </div>
+        </div>
+        <div class="gifts" id="gifts"></div>
+        <div class="row">
+          <button class="btn primary" id="likeBtn" type="button">+10 likes</button>
+          <button class="btn" id="autoBtn" type="button" aria-pressed="false">Mode automatique : arrêté</button>
+          <button class="btn" id="resetBtn" type="button">Réinitialiser</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="col" aria-label="Tableau des scores">
+      <div class="card">
+        <h2>Scores</h2>
+        <div id="board"></div>
+      </div>
+      <div class="card">
+        <h2>Meilleurs contributeurs</h2>
+        <ul class="list" id="top"></ul>
+        <p class="empty" id="topEmpty">Aucun cadeau pour l'instant.</p>
+      </div>
+      <div class="card panel-ui">
+        <h2>Derniers événements</h2>
+        <ul class="list log" id="log"></ul>
+        <p class="empty" id="logEmpty">Rien pour l'instant.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   Données du jeu
+   ------------------------------------------------------------------ */
+const TEAMS = [
+  { name: 'Rouge',  color: '#ff4d6d' },
+  { name: 'Bleu',   color: '#3ea8ff' },
+  { name: 'Vert',   color: '#46d68a' },
+  { name: 'Jaune',  color: '#ffc83d' },
+  { name: 'Violet', color: '#a66bff' },
+];
+
+// points : ajoutés au score de l'équipe. weight : part du tirage en mode automatique.
+const GIFTS = [
+  { name: 'Cœur',     points: 1,  weight: 50 },
+  { name: 'Étoile',   points: 5,  weight: 30 },
+  { name: 'Couronne', points: 30, weight: 15 },
+  { name: 'Fusée',    points: 99, weight: 5  },
+];
+
+const LIKES_PER_BALLOON = 50;
+const MAX_BALLOONS = 140;
+const AUTO_USERS = ['Lina', 'Max', 'Yanis', 'Océane', 'Tom', 'Inès', 'Léo', 'Sami'];
+
+// Nombre de ballons lâchés par un cadeau : 1 pour 1 point, jusqu'à 12.
+const ballsFor = (gift) => Math.min(12, 1 + Math.floor(gift.points / 5));
+
+/* ------------------------------------------------------------------
+   État
+   ------------------------------------------------------------------ */
+const state = {
+  points: TEAMS.map(() => 0),   // points de cadeaux par équipe
+  likes:  TEAMS.map(() => 0),   // likes cumulés par équipe
+  users:  new Map(),            // pseudo -> points de cadeaux donnés
+  log:    [],                   // derniers événements
+  balloons:  [],
+  particles: [],
+};
+
+const score = (i) => state.points[i] + Math.floor(state.likes[i] / LIKES_PER_BALLOON);
+
+/* ------------------------------------------------------------------
+   Arène (canvas)
+   ------------------------------------------------------------------ */
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  W = r.width; H = r.height;
+  canvas.width = Math.max(1, Math.round(W * DPR));
+  canvas.height = Math.max(1, Math.round(H * DPR));
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+function darken(hex, k = 0.45) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * k);
+  const g = Math.round(((n >> 8) & 255) * k);
+  const b = Math.round((n & 255) * k);
+  return `rgb(${r},${g},${b})`;
+}
+
+function spawnBalloon(team) {
+  const lane = W / TEAMS.length;
+  const x = team * lane + lane * (0.2 + 0.6 * Math.random());
+  state.balloons.push({
+    team,
+    x0: x,
+    x,
+    y: H + 40,
+    vy: 45 + Math.random() * 35,
+    r: 16 + Math.random() * 4,
+    amp: 6 + Math.random() * 10,
+    wf: 0.8 + Math.random() * 0.8,
+    phase: Math.random() * Math.PI * 2,
+    color: TEAMS[team].color,
+    dark: darken(TEAMS[team].color),
+    dead: false,
+  });
+  if (state.balloons.length > MAX_BALLOONS) {
+    state.balloons.splice(0, state.balloons.length - MAX_BALLOONS);
+  }
+}
+
+function burst(x, y, color) {
+  for (let k = 0; k < 14; k++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 60 + Math.random() * 140;
+    state.particles.push({
+      x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60,
+      life: 0.6, max: 0.6, color, size: 2 + Math.random() * 2,
+    });
+  }
+}
+
+function step(dt) {
+  for (const b of state.balloons) {
+    b.phase += dt * b.wf * 2;
+    b.y -= b.vy * dt;
+    b.x = b.x0 + Math.sin(b.phase) * (reducedMotion ? 0 : b.amp);
+    if (b.y < -b.r * 3) b.dead = true;
+  }
+  state.balloons = state.balloons.filter((b) => !b.dead);
+
+  for (const p of state.particles) {
+    p.life -= dt;
+    p.vy += 300 * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
+  state.particles = state.particles.filter((p) => p.life > 0);
+}
+
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#0b0d16');
+  g.addColorStop(1, '#171b2a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  const lane = W / TEAMS.length;
+  TEAMS.forEach((t, i) => {
+    // Voile léger par couloir, pour distinguer les équipes.
+    ctx.fillStyle = t.color + '14';
+    ctx.fillRect(i * lane, 0, lane, H);
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(i * lane, 0);
+      ctx.lineTo(i * lane, H);
+      ctx.stroke();
+    }
+    // Nom et score en haut du couloir.
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = t.color;
+    ctx.font = `600 ${Math.max(12, Math.min(18, W / 60))}px "IBM Plex Sans", system-ui, sans-serif`;
+    ctx.fillText(t.name, i * lane + lane / 2, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${Math.max(16, Math.min(28, W / 40))}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.fillText(String(score(i)), i * lane + lane / 2, 10 + Math.max(16, Math.min(22, W / 50)));
+  });
+}
+
+function drawBalloon(b) {
+  const rx = b.r * 0.86, ry = b.r;
+  // Ficelle
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y + ry);
+  ctx.quadraticCurveTo(b.x + 6 * Math.sin(b.phase), b.y + ry + 18, b.x, b.y + ry + 36);
+  ctx.stroke();
+  // Corps, avec un reflet
+  const g = ctx.createRadialGradient(b.x - rx * 0.35, b.y - ry * 0.4, rx * 0.1, b.x, b.y, ry * 1.1);
+  g.addColorStop(0, 'rgba(255,255,255,.85)');
+  g.addColorStop(0.22, b.color);
+  g.addColorStop(1, b.dark);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(b.x, b.y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Noeud
+  ctx.fillStyle = b.dark;
+  ctx.beginPath();
+  ctx.moveTo(b.x - 4, b.y + ry);
+  ctx.lineTo(b.x + 4, b.y + ry);
+  ctx.lineTo(b.x, b.y + ry + 6);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  for (const b of state.balloons) drawBalloon(b);
+  for (const p of state.particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  step(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+
+// Clic sur un ballon : il éclate.
+canvas.addEventListener('click', (e) => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  for (let k = state.balloons.length - 1; k >= 0; k--) {
+    const b = state.balloons[k];
+    const dx = mx - b.x, dy = my - b.y;
+    if (dx * dx + dy * dy <= (b.r * 1.2) ** 2) {
+      b.dead = true;
+      burst(b.x, b.y, b.color);
+      break;
+    }
+  }
+});
+
+/* ------------------------------------------------------------------
+   Événements
+   Point d'entrée unique : une source d'événements réels (cadeaux, likes)
+   doit appeler onEvent(...). Ici, ce sont les boutons et le mode automatique.
+   ------------------------------------------------------------------ */
+function onEvent(evt) {
+  if (evt.type === 'gift') applyGift(evt.team, evt.user, evt.gift);
+  if (evt.type === 'likes') applyLikes(evt.team, evt.user, evt.count);
+}
+
+function addUser(name, points) {
+  state.users.set(name, (state.users.get(name) || 0) + points);
+}
+
+function pushLog(text) {
+  state.log.unshift(text);
+  if (state.log.length > 30) state.log.length = 30;
+}
+
+function applyGift(team, user, gift) {
+  state.points[team] += gift.points;
+  for (let k = 0; k < ballsFor(gift); k++) spawnBalloon(team);
+  addUser(user, gift.points);
+  pushLog(`${user} · ${gift.name} pour ${TEAMS[team].name} (+${gift.points})`);
+  refresh();
+}
+
+function applyLikes(team, user, count) {
+  const before = Math.floor(state.likes[team] / LIKES_PER_BALLOON);
+  state.likes[team] += count;
+  const after = Math.floor(state.likes[team] / LIKES_PER_BALLOON);
+  for (let k = 0; k < after - before; k++) spawnBalloon(team);
+  pushLog(`${user} · ${count} likes pour ${TEAMS[team].name}`);
+  refresh();
+}
+
+function resetAll() {
+  state.points = TEAMS.map(() => 0);
+  state.likes = TEAMS.map(() => 0);
+  state.users.clear();
+  state.log = [];
+  state.balloons = [];
+  state.particles = [];
+  refresh();
+}
+
+/* ------------------------------------------------------------------
+   Affichage des panneaux
+   ------------------------------------------------------------------ */
+function refresh() {
+  renderBoard();
+  renderTop();
+  renderLog();
+}
+
+function renderBoard() {
+  const html = TEAMS.map((t, i) => {
+    const toNext = LIKES_PER_BALLOON - (state.likes[i] % LIKES_PER_BALLOON);
+    const pct = ((LIKES_PER_BALLOON - toNext) / LIKES_PER_BALLOON) * 100;
+    return `
+      <div class="team" style="--tc:${t.color}">
+        <div class="thead">
+          <span class="tname"><span class="swatch"></span>${t.name}</span>
+          <span class="score">${score(i)}</span>
+        </div>
+        <div class="bar" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></div>
+        <div class="meta">${state.likes[i]} likes · ${toNext} de plus pour un ballon</div>
+      </div>`;
+  }).join('');
+  document.getElementById('board').innerHTML = html;
+}
+
+function renderTop() {
+  const ul = document.getElementById('top');
+  const empty = document.getElementById('topEmpty');
+  const rows = [...state.users.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  ul.textContent = '';
+  rows.forEach(([name, pts]) => {
+    const li = document.createElement('li');
+    const a = document.createElement('span');
+    a.textContent = name;
+    const b = document.createElement('span');
+    b.textContent = `${pts} pts`;
+    li.append(a, b);
+    ul.appendChild(li);
+  });
+  empty.hidden = rows.length > 0;
+}
+
+function renderLog() {
+  const ul = document.getElementById('log');
+  const empty = document.getElementById('logEmpty');
+  ul.textContent = '';
+  state.log.slice(0, 8).forEach((text) => {
+    const li = document.createElement('li');
+    const s = document.createElement('span');
+    s.textContent = text;
+    li.appendChild(s);
+    ul.appendChild(li);
+  });
+  empty.hidden = state.log.length > 0;
+}
+
+/* ------------------------------------------------------------------
+   Contrôles
+   ------------------------------------------------------------------ */
+const userInput = document.getElementById('user');
+const teamSelect = document.getElementById('team');
+const giftsBox = document.getElementById('gifts');
+const autoBtn = document.getElementById('autoBtn');
+
+function currentUser() {
+  return userInput.value.trim().slice(0, 24) || 'Viewer';
+}
+
+TEAMS.forEach((t, i) => {
+  const o = document.createElement('option');
+  o.value = String(i);
+  o.textContent = t.name;
+  teamSelect.appendChild(o);
+});
+
+GIFTS.forEach((g, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'btn';
+  b.dataset.gift = String(i);
+  b.innerHTML = `${g.name}<small>${g.points} pt${g.points > 1 ? 's' : ''} · ${ballsFor(g)} ballon${ballsFor(g) > 1 ? 's' : ''}</small>`;
+  b.addEventListener('click', () => {
+    onEvent({ type: 'gift', team: Number(teamSelect.value), user: currentUser(), gift: g });
+  });
+  giftsBox.appendChild(b);
+});
+
+document.getElementById('likeBtn').addEventListener('click', () => {
+  onEvent({ type: 'likes', team: Number(teamSelect.value), user: currentUser(), count: 10 });
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const name = document.getElementById('tiktokUser').value;
+  if (!sendToBridge({ type: 'connect', user: name })) {
+    setStatus('Programme de liaison introuvable : la simulation reste active.');
+  }
+});
+
+let autoTimer = null;
+function pickGift() {
+  const total = GIFTS.reduce((s, g) => s + g.weight, 0);
+  let r = Math.random() * total;
+  for (const g of GIFTS) {
+    r -= g.weight;
+    if (r < 0) return g;
+  }
+  return GIFTS[0];
+}
+function setAuto(on) {
+  if (on && !autoTimer) {
+    autoTimer = setInterval(() => {
+      const user = AUTO_USERS[Math.floor(Math.random() * AUTO_USERS.length)];
+      const team = Math.floor(Math.random() * TEAMS.length);
+      if (Math.random() < 0.7) {
+        onEvent({ type: 'likes', team, user, count: 5 + Math.floor(Math.random() * 20) });
+      } else {
+        onEvent({ type: 'gift', team, user, gift: pickGift() });
+      }
+    }, 900);
+  }
+  if (!on && autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+  autoBtn.setAttribute('aria-pressed', String(on));
+  autoBtn.textContent = on ? 'Mode automatique : actif' : 'Mode automatique : arrêté';
+}
+autoBtn.addEventListener('click', () => setAuto(!autoTimer));
+
+/* Mode overlay : #overlay masque le panneau et laisse l'arène seule. */
+function syncOverlay() {
+  document.documentElement.classList.toggle('is-overlay', location.hash === '#overlay');
+  resize();
+}
+window.addEventListener('hashchange', syncOverlay);
+window.addEventListener('resize', resize);
+
+/* ------------------------------------------------------------------
+   Liaison avec le programme local (bridge.js). S'il répond, il remplace la simulation.
+   ------------------------------------------------------------------ */
+function setStatus(text) {
+  const el = document.getElementById('status');
+  if (el) el.textContent = text;
+}
+
+// Chaque viewer est rattaché à une équipe de façon stable, à partir de son pseudo.
+function teamFor(name) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % TEAMS.length;
+}
+
+let socket = null;
+
+function sendToBridge(obj) {
+  if (socket && socket.readyState === 1) {
+    socket.send(JSON.stringify(obj));
+    return true;
+  }
+  return false;
+}
+
+function connectBridge() {
+  let ws;
+  try {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+  } catch (e) {
+    return;
+  }
+  socket = ws;
+  ws.onopen = () => {
+    setAuto(false);
+    setStatus('Connecté au programme local : en attente du live.');
+  };
+  ws.onmessage = (msg) => {
+    let d;
+    try { d = JSON.parse(msg.data); } catch (e) { return; }
+    if (d.type === 'status') setStatus(d.text);
+    if (d.type === 'gift') {
+      onEvent({
+        type: 'gift',
+        team: teamFor(d.user),
+        user: d.user,
+        gift: { name: d.giftName, points: Math.max(1, d.diamonds), weight: 0 },
+      });
+    }
+    if (d.type === 'like') {
+      onEvent({ type: 'likes', team: teamFor(d.user), user: d.user, count: d.count });
+    }
+  };
+  ws.onclose = () => {
+    socket = null;
+    setStatus('Simulation : le programme de liaison n\'est pas lancé.');
+    if (!autoTimer) setAuto(true);
+  };
+}
+
+/* ------------------------------------------------------------------
+   Démarrage
+   ------------------------------------------------------------------ */
+syncOverlay();
+refresh();
+setAuto(true);
+connectBridge();
+requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>
