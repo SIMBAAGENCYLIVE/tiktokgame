@@ -1,6 +1,6 @@
 package arene;
 
-import io.github.jwdeveloper.tiktok.TikTokLive; // à vérifier : nom du paquet dans le README
+import io.github.jwdeveloper.tiktok.TikTokLive; // à vérifier : nom du paquet (voir le journal de build)
 import io.javalin.Javalin;
 import io.javalin.websocket.WsConnectContext;
 import io.javalin.websocket.WsContext;
@@ -69,28 +69,20 @@ public class Bridge {
         new Thread(() -> {
             try {
                 var client = TikTokLive.newClient(username)
-                    .onConnected((c, e) -> status("Connecté au live de @" + username))
-                    .onDisconnected((c, e) -> {
-                        currentClient = null;
-                        status("Déconnecté du live");
-                    })
                     .onComment((c, e) -> broadcast("{\"type\":\"chat\",\"user\":" + q(e.getUser().getName())
                         + ",\"text\":" + q(e.getText()) + "}"))
-                    .onJoin((c, e) -> broadcast("{\"type\":\"member\",\"user\":"
-                        + q(e.getUser().getName()) + "}"))
-                    .onLike((c, e) -> broadcast("{\"type\":\"like\",\"user\":" + q(e.getUser().getName())
-                        + ",\"count\":" + e.getLikeCount() + "}"))
                     .onGift((c, e) -> {
-                        int count = Math.max(1, e.getRepeatCount());
-                        int diamonds = Math.max(1, e.getGift().getDiamondCount()) * count;
-                        System.out.println(e.getUser().getName() + " · " + e.getGift().getName()
-                            + " x" + count + " (" + diamonds + " diamants)");
-                        broadcast("{\"type\":\"gift\",\"user\":" + q(e.getUser().getName())
-                            + ",\"giftName\":" + q(e.getGift().getName())
-                            + ",\"diamonds\":" + diamonds + "}");
+                        // Un cadeau compte pour 1 diamant : à ajuster quand la valeur exacte sera vérifiée.
+                        String gift = e.getGift().getName();
+                        String user = e.getUser().getName();
+                        System.out.println(user + " · " + gift);
+                        broadcast("{\"type\":\"gift\",\"user\":" + q(user)
+                            + ",\"giftName\":" + q(gift) + ",\"diamonds\":1}");
                     })
+                    .onLike((c, e) -> broadcast("{\"type\":\"like\",\"user\":\"\",\"count\":1}"))
                     .buildAndConnect();
                 currentClient = client;
+                status("Connecté au live de @" + username);
             } catch (Exception err) {
                 System.err.println("Connexion impossible : " + err.getMessage());
                 currentClient = null;
