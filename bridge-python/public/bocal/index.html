@@ -49,5 +49,119 @@
   <script src="config.js"></script>
   <script src="lib.js"></script>
   <script src="overlay.js"></script>
+
+<style>
+  #btnReglages { position: fixed; top: 10px; right: 10px; z-index: 10000; font: 600 13px system-ui, sans-serif;
+    background: rgba(20,22,28,.85); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 999px;
+    padding: 8px 12px; cursor: pointer; }
+  #panelReglages { position: fixed; inset: 0; z-index: 9999; display: none; background: #0e0f13; isolation: isolate;
+    color: #f2f3f7; font: 14px system-ui, -apple-system, "Segoe UI", sans-serif; overflow: auto; padding: 16px; }
+  #panelReglages.open { display: block; }
+  #panelReglages .box { max-width: 420px; margin: 0 auto; display: grid; gap: 12px; }
+  #panelReglages h2 { font-size: 18px; margin: 0; }
+  #panelReglages .f { display: grid; gap: 4px; }
+  #panelReglages .f label { font-size: 12px; color: #aab0bd; display: flex; justify-content: space-between; }
+  #panelReglages .f label.r { justify-content: flex-start; font-size: 14px; color: #f2f3f7; }
+  #panelReglages .r { display: flex; align-items: center; gap: 8px; }
+  #panelReglages input[type=text], #panelReglages input[type=number] { width: 100%; padding: 7px 9px; border-radius: 8px;
+    border: 1px solid #2c2f3a; background: #14161d; color: #f2f3f7; font: inherit; }
+  #panelReglages input[type=range] { width: 100%; }
+  #panelReglages .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  #panelReglages button { font: inherit; border-radius: 999px; padding: 9px 14px; cursor: pointer;
+    border: 1px solid #2c2f3a; background: #1c1f28; color: #f2f3f7; }
+  #panelReglages button.primary { background: #ff5a1f; border-color: #ff5a1f; color: #fff; font-weight: 600; }
+  #panelReglages .note { font-size: 12px; color: #aab0bd; line-height: 1.5; }
+</style>
+<button id="btnReglages" type="button" aria-controls="panelReglages" aria-expanded="false">⚙ Réglages</button>
+<div id="panelReglages" role="dialog" aria-label="Réglages du bocal">
+  <div class="box">
+    <h2>Réglages du bocal</h2>
+    <p class="note">Chaque changement recharge le bocal avec les nouveaux réglages. La jarre garde ses cadeaux.</p>
+    <div class="f"><label for="rTitle">Titre</label><input type="text" id="rTitle"></div>
+    <div class="f"><label>Couleur principale / accent</label><div class="r"><input type="color" id="rTheme"><input type="color" id="rAccent"></div></div>
+    <div class="f"><label>Largeur <span id="vWidth"></span></label><input type="range" id="rWidth" min="220" max="640" step="10"></div>
+    <div class="f"><label>Taille générale <span id="vScale"></span></label><input type="range" id="rScale" min="0.5" max="1.5" step="0.05"></div>
+    <div class="f"><label>Taille des cadeaux <span id="vGiftScale"></span></label><input type="range" id="rGiftScale" min="0.5" max="2" step="0.05"></div>
+    <div class="f"><label>Gravité <span id="vGravity"></span></label><input type="range" id="rGravity" min="0.2" max="2" step="0.05"></div>
+    <div class="f"><label>Cadeaux max dans le bocal <span id="vMaxBodies"></span></label><input type="range" id="rMaxBodies" min="30" max="320" step="10"></div>
+    <div class="f"><label>Valeur d'un gros cadeau qui casse le bocal (diamants)</label><input type="number" id="rCrack" min="1"></div>
+    <div class="f"><label>Volume des sons <span id="vVolume"></span></label><input type="range" id="rVolume" min="0" max="1" step="0.05"></div>
+    <div class="f">
+      <label class="r"><input type="checkbox" id="rCombine"> Fusionner les cadeaux identiques qui se touchent</label>
+      <label class="r"><input type="checkbox" id="rJarBreaks"> Le bocal peut casser</label>
+      <label class="r"><input type="checkbox" id="rTotal"> Afficher le total</label>
+      <label class="r"><input type="checkbox" id="rAlert"> Afficher le message du dernier cadeau</label>
+      <label class="r"><input type="checkbox" id="rLeader"> Afficher le classement</label>
+      <label class="r"><input type="checkbox" id="rDemo"> Mode démo (cadeaux factices)</label>
+    </div>
+    <div class="acts">
+      <button class="primary" id="rCopy" type="button">Copier l'URL pour OBS</button>
+      <button id="rFermer" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  if (new URLSearchParams(location.search).get('sansboutons') === 'true') return;   // URL OBS : pas de bouton
+  const $ = (id) => document.getElementById(id);
+  const P = new URLSearchParams(location.search);
+  const DEF = { title: 'Bocal de cadeaux', theme: '#ff2d55', accent: '#ffd54a', width: '360', scale: '1', giftScale: '1',
+    gravity: '1', maxBodies: '200', crackBigGiftCoins: '100', volume: '0.7', combine: 'false', jarBreaks: 'true',
+    showTotalCoins: 'true', displayAlert: 'true', displayLeaderboard: 'true', demo: 'false' };
+  const RANGES = ['width', 'scale', 'giftScale', 'gravity', 'maxBodies', 'volume'];
+  const TEXTS = ['title', 'theme', 'accent', 'crackBigGiftCoins'];
+  const MAP = { title: 'rTitle', theme: 'rTheme', accent: 'rAccent', crackBigGiftCoins: 'rCrack', width: 'rWidth', scale: 'rScale',
+    giftScale: 'rGiftScale', gravity: 'rGravity', maxBodies: 'rMaxBodies', volume: 'rVolume' };
+  const CHECKS = { combine: 'rCombine', jarBreaks: 'rJarBreaks', showTotalCoins: 'rTotal', displayAlert: 'rAlert',
+    displayLeaderboard: 'rLeader', demo: 'rDemo' };
+  const val = (k) => P.has(k) ? P.get(k) : DEF[k];
+
+  Object.keys(MAP).forEach((k) => { $(MAP[k]).value = val(k); });
+  Object.keys(CHECKS).forEach((k) => { $(CHECKS[k]).checked = val(k) === 'true'; });
+
+  function readAll() {
+    const v = {};
+    Object.keys(MAP).forEach((k) => { v[k] = $(MAP[k]).value; });
+    Object.keys(CHECKS).forEach((k) => { v[k] = $(CHECKS[k]).checked ? 'true' : 'false'; });
+    return v;
+  }
+  function labels() {
+    $('vWidth').textContent = $('rWidth').value + ' px';
+    $('vScale').textContent = $('rScale').value;
+    $('vGiftScale').textContent = $('rGiftScale').value;
+    $('vGravity').textContent = $('rGravity').value;
+    $('vMaxBodies').textContent = $('rMaxBodies').value;
+    $('vVolume').textContent = Math.round($('rVolume').value * 100) + ' %';
+  }
+  function query() {
+    const v = readAll(), q = new URLSearchParams();
+    TEXTS.forEach((k) => q.set(k, v[k]));
+    RANGES.forEach((k) => q.set(k, v[k]));
+    Object.keys(CHECKS).forEach((k) => q.set(k, v[k]));
+    return q.toString();
+  }
+  let timer = null;
+  function changed() {
+    labels();
+    clearTimeout(timer);
+    timer = setTimeout(() => { location.replace(location.pathname + '?' + query()); }, 400);
+  }
+  document.querySelectorAll('#panelReglages input').forEach((el) => {
+    el.addEventListener('input', changed); el.addEventListener('change', changed);
+  });
+  labels();
+
+  const panel = $('panelReglages'), btn = $('btnReglages');
+  btn.addEventListener('click', () => { panel.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); });
+  $('rFermer').addEventListener('click', () => { panel.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); });
+  $('rCopy').addEventListener('click', () => {
+    const url = location.origin + location.pathname + '?' + query() + '&sansboutons=true';
+    const done = () => { $('rCopy').textContent = 'URL copiée'; setTimeout(() => { $('rCopy').textContent = "Copier l'URL pour OBS"; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, done);
+    else { window.prompt('Copie cette URL :', url); }
+  });
+})();
+</script>
+
 </body>
 </html>

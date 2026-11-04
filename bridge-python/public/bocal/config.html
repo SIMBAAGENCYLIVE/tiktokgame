@@ -141,7 +141,7 @@
     CHECKS.forEach((k) => p.set(k, v[k] ? 'true' : 'false'));
     return p.toString();
   }
-  function obsUrl(v) { return location.origin + '/bocal/index.html?' + query(v); }
+  function obsUrl(v) { return location.origin + '/bocal/index.html?' + query(v) + '&sansboutons=true'; }
 
   let timer = null;
   function refresh() {
