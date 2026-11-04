@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réglages du bocal de cadeaux</title>
+<style>
+  :root { --bg:#f4f5f8; --card:#ffffff; --ink:#15161a; --muted:#6b6f7b; --line:#dfe2ea; --accent:#ff5a1f; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#0e0f13; --card:#171920; --ink:#f2f3f7; --muted:#9aa0ad; --line:#2a2d38; --accent:#ff7a4a; }
+  }
+  :root[data-theme="dark"] { --bg:#0e0f13; --card:#171920; --ink:#f2f3f7; --muted:#9aa0ad; --line:#2a2d38; --accent:#ff7a4a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); padding-block: 20px; }
+  .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .wrap { grid-template-columns: 340px 1fr; } }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.5; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .field { display: grid; gap: 6px; margin-bottom: 14px; }
+  .field label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row input[type=checkbox] { width: 18px; height: 18px; }
+  input[type=text], input[type=number] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  input[type=color] { width: 48px; height: 32px; border: none; background: none; padding: 0; }
+  input[type=range] { width: 100%; }
+  .val { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .preview { width: 100%; height: 620px; border: 1px solid var(--line); border-radius: 14px; background:
+             repeating-conic-gradient(#8884 0% 25%, transparent 0% 50%) 50% / 24px 24px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 14px; border-radius: 999px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .url { margin-top: 12px; font-size: 12px; color: var(--muted); word-break: break-all; background: var(--bg); padding: 10px; border-radius: 10px; border: 1px solid var(--line); }
+  .back { font-size: 14px; color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="panel" aria-label="Réglages">
+    <h1>Réglages du bocal</h1>
+    <p class="sub">Change les réglages, l'aperçu se met à jour. Copie ensuite l'URL pour OBS (source navigateur).</p>
+    <div style="height:14px"></div>
+
+    <div class="field"><label for="title">Titre</label><input type="text" id="title" value="Bocal de cadeaux"></div>
+
+    <div class="field"><label>Couleur principale <span class="val" id="v-theme"></span></label>
+      <div class="row"><input type="color" id="theme" value="#ff2d55"><input type="color" id="accent" value="#ffd54a"><span class="sub">principale / accent</span></div></div>
+
+    <div class="field"><label>Largeur du bocal <span class="val" id="v-width"></span></label>
+      <input type="range" id="width" min="220" max="640" step="10" value="360"></div>
+
+    <div class="field"><label>Taille générale <span class="val" id="v-scale"></span></label>
+      <input type="range" id="scale" min="0.5" max="1.5" step="0.05" value="1"></div>
+
+    <div class="field"><label>Taille des cadeaux <span class="val" id="v-giftScale"></span></label>
+      <input type="range" id="giftScale" min="0.5" max="2" step="0.05" value="1"></div>
+
+    <div class="field"><label>Gravité <span class="val" id="v-gravity"></span></label>
+      <input type="range" id="gravity" min="0.2" max="2" step="0.05" value="1"></div>
+
+    <div class="field"><label>Cadeaux max dans le bocal <span class="val" id="v-maxBodies"></span></label>
+      <input type="range" id="maxBodies" min="30" max="320" step="10" value="200"></div>
+
+    <div class="field"><label>Valeur d'un gros cadeau qui casse le bocal (diamants)</label>
+      <input type="number" id="crackBigGiftCoins" min="1" value="100"></div>
+
+    <div class="field"><label>Volume des sons <span class="val" id="v-volume"></span></label>
+      <input type="range" id="volume" min="0" max="1" step="0.05" value="0.7"></div>
+
+    <div class="field">
+      <div class="row"><input type="checkbox" id="combine"><label for="combine">Fusionner les cadeaux identiques qui se touchent</label></div>
+      <div class="row"><input type="checkbox" id="jarBreaks" checked><label for="jarBreaks">Le bocal peut casser</label></div>
+      <div class="row"><input type="checkbox" id="showTotalCoins" checked><label for="showTotalCoins">Afficher le total</label></div>
+      <div class="row"><input type="checkbox" id="displayAlert" checked><label for="displayAlert">Afficher le message du dernier cadeau</label></div>
+      <div class="row"><input type="checkbox" id="displayLeaderboard" checked><label for="displayLeaderboard">Afficher le classement</label></div>
+      <div class="row"><input type="checkbox" id="demo"><label for="demo">Mode démo (cadeaux factices)</label></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="copy">Copier l'URL pour OBS</button>
+      <button id="reset">Réinitialiser</button>
+      <a class="back" href="../">← Retour à l'accueil</a>
+    </div>
+    <div class="url" id="url"></div>
+  </section>
+
+  <section aria-label="Aperçu">
+    <iframe class="preview" id="preview" title="Aperçu du bocal"></iframe>
+  </section>
+</div>
+
+<script>
+(function () {
+  const KEY = 'bocal-reglages';
+  const DEFAULTS = {
+    title: 'Bocal de cadeaux', theme: '#ff2d55', accent: '#ffd54a', width: '360', scale: '1',
+    giftScale: '1', gravity: '1', maxBodies: '200', crackBigGiftCoins: '100', volume: '0.7',
+    combine: false, jarBreaks: true, showTotalCoins: true, displayAlert: true, displayLeaderboard: true, demo: false
+  };
+  const RANGES = ['width', 'scale', 'giftScale', 'gravity', 'maxBodies', 'volume'];
+  const CHECKS = ['combine', 'jarBreaks', 'showTotalCoins', 'displayAlert', 'displayLeaderboard', 'demo'];
+  const TEXTS = ['title', 'theme', 'accent', 'crackBigGiftCoins'];
+  const $ = (id) => document.getElementById(id);
+
+  function load() {
+    try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); }
+    catch (e) { return Object.assign({}, DEFAULTS); }
+  }
+  function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* navigation privée : pas de sauvegarde */ } }
+
+  function apply(v) {
+    $('title').value = v.title;
+    $('theme').value = v.theme;
+    $('accent').value = v.accent;
+    $('crackBigGiftCoins').value = v.crackBigGiftCoins;
+    RANGES.forEach((k) => { $(k).value = v[k]; });
+    CHECKS.forEach((k) => { $(k).checked = !!v[k]; });
+  }
+  function read() {
+    const v = {};
+    TEXTS.forEach((k) => { v[k] = $(k).value; });
+    RANGES.forEach((k) => { v[k] = $(k).value; });
+    CHECKS.forEach((k) => { v[k] = $(k).checked; });
+    return v;
+  }
+  function labels(v) {
+    $('v-theme').textContent = v.theme;
+    $('v-width').textContent = v.width + ' px';
+    $('v-scale').textContent = v.scale;
+    $('v-giftScale').textContent = v.giftScale;
+    $('v-gravity').textContent = v.gravity;
+    $('v-maxBodies').textContent = v.maxBodies;
+    $('v-volume').textContent = Math.round(v.volume * 100) + ' %';
+  }
+  function query(v) {
+    const p = new URLSearchParams();
+    TEXTS.forEach((k) => p.set(k, v[k]));
+    RANGES.forEach((k) => p.set(k, v[k]));
+    CHECKS.forEach((k) => p.set(k, v[k] ? 'true' : 'false'));
+    return p.toString();
+  }
+  function obsUrl(v) { return location.origin + '/bocal/index.html?' + query(v); }
+
+  let timer = null;
+  function refresh() {
+    const v = read();
+    labels(v);
+    save(v);
+    $('url').textContent = obsUrl(v);
+    clearTimeout(timer);
+    timer = setTimeout(() => { $('preview').src = 'index.html?' + query(v); }, 150);
+  }
+
+  apply(load());
+  document.querySelectorAll('input').forEach((el) => el.addEventListener('input', refresh));
+  document.querySelectorAll('input[type=checkbox]').forEach((el) => el.addEventListener('change', refresh));
+  $('copy').addEventListener('click', () => {
+    const text = $('url').textContent;
+    const done = () => { $('copy').textContent = 'URL copiée'; setTimeout(() => { $('copy').textContent = "Copier l'URL pour OBS"; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+    else { const r = document.createRange(); r.selectNodeContents($('url')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); done(); }
+  });
+  $('reset').addEventListener('click', () => { apply(DEFAULTS); refresh(); });
+  refresh();
+})();
+</script>
+</body>
+</html>
