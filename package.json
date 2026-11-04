@@ -1,0 +1,14 @@
+{
+  "name": "arene-ballons-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Liaison entre un live TikTok et la page de l'arène de ballons",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.0.6-beta2",
+    "ws": "8.18.0"
+  }
+}
