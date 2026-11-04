@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coin Jar Pro — TikTok Overlay</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="overlay.css" />
+</head>
+<body>
+  <!-- Coin Jar overlay: your layered jar art with gifts piling inside. -->
+  <div id="app" class="cjp" aria-live="polite">
+    <!-- Back of the jar (behind the gifts) -->
+    <div class="cjp-layer cjp-back" aria-hidden="true">
+      <img id="jarBack" alt="" />
+      <img id="jarBottom" alt="" />
+    </div>
+    <!-- Gifts (physics) -->
+    <canvas id="canvas" class="cjp-canvas"></canvas>
+    <!-- Front glass (over the gifts) -->
+    <div class="cjp-layer cjp-front" aria-hidden="true">
+      <img id="jarFront" alt="" />
+    </div>
+    <!-- FX layer (over the glass): cracks, shatter flash, glass shards -->
+    <canvas id="fx" class="cjp-fx" aria-hidden="true"></canvas>
+
+    <!-- Debug panel: toggle with ?debug=1 or the "d" key -->
+    <div class="cjp-debug hidden" id="debug">
+      <div class="cjp-debug-row"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
+      <div class="cjp-debug-row" id="debugStats"></div>
+      <pre class="cjp-debug-log" id="debugLog"></pre>
+      <div class="cjp-debug-help">keys: <b>d</b> debug · <b>c</b> combine · <b>g</b> spawn gift · <b>b</b> break · <b>r</b> reset</div>
+    </div>
+  </div>
+
+  <!-- HUD: fixed to the visible frame, independent of the jar's tall canvas -->
+  <div class="cjp-total hidden" id="total" aria-hidden="true">
+    <img class="cjp-total-coin" id="totalCoin" alt="" src="assets/coin.png" />
+    <span class="cjp-total-num" id="totalNum">0</span>
+  </div>
+  <div class="cjp-announce" id="announce" aria-live="polite"></div>
+  <div class="cjp-board hidden" id="board" aria-hidden="true"></div>
+  <div class="cjp-progress hidden" id="progress"><div class="cjp-bar"><div class="cjp-bar-fill" id="barFill"></div></div></div>
+  <!-- Kill tally: a broken-jar mark for every jar shattered (top-right) -->
+  <div class="cjp-tally hidden" id="tally" aria-hidden="true"></div>
+
+  <!-- Vendored, offline-friendly. Order matters: physics + pure lib before the app. -->
+  <script src="vendor/matter.min.js"></script>
+  <script src="config.js"></script>
+  <script src="lib.js"></script>
+  <script src="overlay.js"></script>
+</body>
+</html>

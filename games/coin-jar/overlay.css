@@ -1,0 +1,211 @@
+/* Coin Jar Pro (clone) overlay styles.
+   Most colors/sizes are set at runtime from URL params via CSS variables. */
+:root {
+  --cjp-theme: #ff2d55;
+  --cjp-accent: #ffd54a;
+  --cjp-jar: #bfe9ff;
+  --cjp-width: 360px;
+  --cjp-font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --cjp-font-scale: 1;     /* from Font Size (50 = 1.0) */
+  --cjp-letter: normal;    /* from Font Letter Spacing */
+  --cjp-line: 1.2;         /* from Font Line Spacing */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent;        /* OBS browser source = transparent by default */
+  overflow: hidden;
+  font-family: var(--cjp-font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.cjp {
+  position: absolute;
+  left: 50%;
+  bottom: 0;                      /* anchor to the BOTTOM of the frame: the jar sits on the
+                                     ground and the tall overflow headroom extends UPWARD
+                                     (clipped off the top on short frames) — so the jar is
+                                     never clipped at the bottom. */
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  color: #fff;
+  /* width/height set inline by JS to match the canvas */
+}
+
+/* ---- Layered jar (your PNGs) + gift canvas ----------------------------- */
+.cjp-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.cjp-back { z-index: 0; }
+.cjp-front { z-index: 2; }
+.cjp-layer img { position: absolute; display: block; will-change: transform; }
+
+.cjp-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  display: block;
+}
+.cjp-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;            /* over the front glass: cracks, shatter flash, glass shards */
+  display: block;
+  pointer-events: none;
+}
+
+/* ---- Progress ----------------------------------------------------------- */
+.cjp-progress { width: var(--cjp-width); margin-top: 10px; }
+
+.cjp-bar {
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.cjp-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--cjp-accent) 90%, white 0%),
+    var(--cjp-theme));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cjp-theme) 70%, transparent);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cjp-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 6px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.cjp-count { font-size: 20px; }
+.cjp-percent { font-size: 16px; opacity: 0.9; }
+
+.cjp.goal-reached .cjp-title { animation: cjp-pulse 0.9s ease-in-out infinite; }
+@keyframes cjp-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* ---- Debug panel -------------------------------------------------------- */
+.cjp-debug {
+  margin-top: 10px;
+  width: var(--cjp-width);
+  font-size: 12px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: #d8f5e0;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.cjp-debug-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.cjp-debug .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #888; box-shadow: 0 0 6px #888;
+}
+.cjp-debug .dot.ok { background: #36d399; box-shadow: 0 0 8px #36d399; }
+.cjp-debug .dot.warn { background: #fbbd23; box-shadow: 0 0 8px #fbbd23; }
+.cjp-debug .dot.bad { background: #f87272; box-shadow: 0 0 8px #f87272; }
+.cjp-debug-log {
+  margin: 4px 0 0;
+  max-height: 110px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  opacity: 0.85;
+}
+.cjp-debug-help { margin-top: 6px; opacity: 0.6; }
+.hidden { display: none !important; }
+
+/* ---- HUD: total / announcement / leaderboard / progress ----------------- */
+/* All fixed to the visible frame so they're independent of the jar's tall canvas. */
+.cjp-total {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; align-items: center; gap: 8px;
+  padding: 6px 16px 6px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 18px color-mix(in srgb, var(--cjp-accent) 35%, transparent);
+  color: #fff; font-weight: 900; font-size: calc(26px * var(--cjp-font-scale));
+  letter-spacing: var(--cjp-letter);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums;
+}
+.cjp-total-coin { width: 30px; height: 30px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.cjp-total.pop { animation: cjp-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes cjp-pop {
+  0%   { transform: translateX(-50%) scale(1); }
+  40%  { transform: translateX(-50%) scale(1.16); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+.cjp-announce {
+  position: fixed; top: 58px; left: 50%; z-index: 9; max-width: 92vw;
+  transform: translateX(-50%) translateY(-10px);
+  padding: 8px 16px; border-radius: 12px; white-space: nowrap;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--cjp-theme) 92%, #000 0%),
+    color-mix(in srgb, var(--cjp-theme) 72%, #000 12%));
+  color: #fff; font-weight: 700; font-size: calc(15px * var(--cjp-font-scale));
+  letter-spacing: var(--cjp-letter);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cjp-announce.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.cjp-announce b { color: var(--cjp-accent); }
+.cjp-ann-coins { color: var(--cjp-accent); font-weight: 900; margin-left: 4px; }
+
+.cjp-board {
+  position: fixed; top: 10px; left: 10px; z-index: 8;
+  min-width: 132px; padding: 8px 10px; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff; font-size: calc(13px * var(--cjp-font-scale)); font-weight: 700;
+  letter-spacing: var(--cjp-letter); line-height: var(--cjp-line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.cjp-board-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px; }
+.cjp-board-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.cjp-board-rank { width: 16px; text-align: center; color: var(--cjp-accent); font-weight: 900; }
+.cjp-board-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.cjp-board-coins { font-variant-numeric: tabular-nums; opacity: 0.95; }
+.cjp-board-av { width: calc(20px * var(--cjp-font-scale)); height: calc(20px * var(--cjp-font-scale)); border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.cjp-board-rank.r1 { color: #ffd54a; text-shadow: 0 0 8px rgba(255, 213, 74, 0.55); }
+.cjp-board-rank.r2 { color: #cfd8e3; }
+.cjp-board-rank.r3 { color: #e6a86b; }
+.cjp-board-row:first-of-type .cjp-board-rank { color: #ffd54a; text-shadow: 0 0 8px rgba(255, 213, 74, 0.55); }
+
+.cjp-progress { position: fixed; left: 0; right: 0; bottom: 0; width: auto; margin: 0; z-index: 7; }
+.cjp-progress .cjp-bar { height: 8px; border-radius: 0; }
+
+/* ---- Kill tally: a broken-jar mark for every jar shattered (top-right) --- */
+.cjp-tally {
+  position: fixed; top: 10px; right: 10px; z-index: 11;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center;
+  gap: 4px; max-width: 46vw;
+}
+.cjp-kill {
+  width: calc(22px * var(--cjp-font-scale)); height: calc(22px * var(--cjp-font-scale));
+  opacity: 0.9; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+}
+.cjp-kill.pop { animation: cjp-killpop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes cjp-killpop {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 0.9; }
+}

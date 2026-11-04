@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+  <!-- A broken / cracked jar stencil for the "kill tally". Solid silhouette in
+       currentColor with the crack + a chipped rim knocked out so the background
+       shows through (WW2 fuselage kill-mark style). -->
+  <defs>
+    <mask id="cjpKillMask" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+      <rect width="24" height="24" fill="black"/>
+      <!-- lid / rim -->
+      <rect x="6" y="2.1" width="12" height="2.9" rx="1.2" fill="white"/>
+      <!-- neck -->
+      <rect x="8" y="4.7" width="8" height="1.7" fill="white"/>
+      <!-- body -->
+      <rect x="4.7" y="6" width="14.6" height="15.6" rx="3.4" fill="white"/>
+      <!-- knock out the jagged crack -->
+      <path d="M12 6.3 L10.6 9 L12.5 10.5 L10.8 13 L12.4 15.2 L11.2 18.4"
+            fill="none" stroke="black" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12.55 10.4 L14.8 11.1" fill="none" stroke="black" stroke-width="1.1" stroke-linecap="round"/>
+      <!-- chipped piece out of the top-right rim -->
+      <path d="M15.4 6 L19.3 6 L18.1 9.4 Z" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="24" height="24" fill="#ffffff" mask="url(#cjpKillMask)"/>
+</svg>
