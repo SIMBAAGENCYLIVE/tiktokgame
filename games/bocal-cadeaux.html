@@ -1,0 +1,304 @@
+<title>Bocal de cadeaux</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Plan : un bocal de verre sur fond sobre. Accent chaud, typo système lisible.
+   Tous les couleurs passent par des jetons, avec variantes clair et sombre. */
+:root {
+  --bg: #f5f3ee;
+  --fg: #1d1b18;
+  --muted: #6b665d;
+  --panel: #ffffff;
+  --accent: #e0582b;
+  --glass: rgba(120, 140, 150, 0.12);
+  --glass-edge: rgba(70, 90, 100, 0.55);
+  --ok: #2c8a5a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15140f;
+    --fg: #f3efe7;
+    --muted: #a39d91;
+    --panel: #201e18;
+    --accent: #ff7a4a;
+    --glass: rgba(200, 220, 230, 0.08);
+    --glass-edge: rgba(200, 220, 230, 0.45);
+    --ok: #5ccf8e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15140f;
+  --fg: #f3efe7;
+  --muted: #a39d91;
+  --panel: #201e18;
+  --accent: #ff7a4a;
+  --glass: rgba(200, 220, 230, 0.08);
+  --glass-edge: rgba(200, 220, 230, 0.45);
+  --ok: #5ccf8e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px;
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 18px; grid-template-columns: 1fr; }
+header h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.stage-wrap { display: grid; grid-template-columns: 1fr; gap: 14px; justify-items: center; }
+.stage {
+  position: relative; width: 320px; height: 460px; max-width: 100%;
+  border-radius: 6px; overflow: hidden;
+}
+.jar {
+  position: absolute; inset: 0; pointer-events: none;
+  border: 3px solid var(--glass-edge); border-top: none;
+  border-radius: 0 0 26px 26px;
+  background: linear-gradient(90deg, var(--glass) 0%, transparent 18%, transparent 82%, var(--glass) 100%);
+  transition: opacity 0.3s ease;
+}
+.jar::before {
+  content: ""; position: absolute; left: -10px; right: -10px; top: -10px; height: 16px;
+  border: 3px solid var(--glass-edge); border-radius: 8px; background: var(--glass);
+}
+.stage.broken .jar { opacity: 0; }
+.gift {
+  position: absolute; left: 0; top: 0; will-change: transform;
+  display: grid; place-items: center; line-height: 1;
+  user-select: none;
+}
+.flash {
+  position: absolute; inset: 0; background: var(--accent); opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.flash.on { opacity: 0.22; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat {
+  background: var(--panel); border-radius: 10px; padding: 12px 14px;
+}
+.stat small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.stat strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.controls { display: grid; gap: 10px; }
+.gifts { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--glass-edge);
+  border-radius: 999px; padding: 9px 14px; cursor: pointer; font-size: 14px;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button[aria-pressed="true"] { border-color: var(--ok); color: var(--ok); }
+.log {
+  background: var(--panel); border-radius: 10px; padding: 12px 14px; font-size: 14px;
+  min-height: 60px; line-height: 1.6;
+}
+.log div { color: var(--muted); }
+.log div:first-child { color: var(--fg); }
+.note { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .flash, .jar { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Bocal de cadeaux</h1>
+    <p>Démo locale : chaque cadeau tombe dans le bocal. Quand il déborde, ou qu'un gros cadeau arrive, le bocal casse.</p>
+  </header>
+
+  <div class="stage-wrap">
+    <div class="stage" id="stage" aria-label="Bocal de cadeaux">
+      <div class="flash" id="flash"></div>
+      <div class="jar" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><small>Cadeaux</small><strong id="count">0</strong></div>
+    <div class="stat"><small>Diamants</small><strong id="diamonds">0</strong></div>
+    <div class="stat"><small>Bocaux cassés</small><strong id="breaks">0</strong></div>
+  </div>
+
+  <div class="controls">
+    <div class="gifts" id="gifts"></div>
+    <div class="gifts">
+      <button id="auto" aria-pressed="false">Mode auto : off</button>
+      <button id="reset">Réinitialiser</button>
+    </div>
+  </div>
+
+  <div class="log" id="log" aria-live="polite"><div>En attente d'un cadeau…</div></div>
+
+  <p class="note">Valeurs de démonstration. Aucune donnée TikTok n'est lue sur cette page. Brancher le pont sur les vrais événements se fait plus tard.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+(function () {
+  const { Engine, World, Bodies, Body } = Matter;
+  const W = 320, H = 460, WALL = 12, MAX_BODIES = 70;
+  const OVERFLOW_MS = 2200;   // un cadeau resté trop haut trop longtemps = débordement
+  const BIG = 100;            // à partir de ce nombre de diamants, le bocal casse
+
+  // Cadeaux de démonstration (emojis, pas d'icônes TikTok).
+  const GIFTS = [
+    { name: "Rose",     emoji: "🌹", diamonds: 1,   size: 22 },
+    { name: "Donut",    emoji: "🍩", diamonds: 5,   size: 28 },
+    { name: "Cœur",     emoji: "💖", diamonds: 10,  size: 26 },
+    { name: "Étoiles",  emoji: "⭐", diamonds: 20,  size: 30 },
+    { name: "Lion",     emoji: "🦁", diamonds: 100, size: 40 }
+  ];
+
+  const stage = document.getElementById("stage");
+  const flash = document.getElementById("flash");
+  const logEl = document.getElementById("log");
+  const el = (id) => document.getElementById(id);
+
+  const engine = Engine.create();
+  engine.gravity.y = 1;
+  const world = engine.world;
+
+  let walls = [];
+  let gifts = [];   // { body, node, born }
+  let total = 0, diamonds = 0, breaks = 0;
+  let auto = false, autoTimer = null, lastLines = [];
+  let breaking = false;
+
+  function makeWalls() {
+    return [
+      Bodies.rectangle(W / 2, H - WALL / 2, W, WALL, { isStatic: true, render: { visible: false } }),
+      Bodies.rectangle(WALL / 2, H / 2, WALL, H, { isStatic: true }),
+      Bodies.rectangle(W - WALL / 2, H / 2, WALL, H, { isStatic: true })
+    ];
+  }
+  function addWalls() { walls = makeWalls(); World.add(world, walls); }
+  addWalls();
+
+  function addGiftNode(size, emoji) {
+    const node = document.createElement("div");
+    node.className = "gift";
+    node.style.width = size + "px";
+    node.style.height = size + "px";
+    node.style.fontSize = Math.round(size * 0.85) + "px";
+    node.textContent = emoji;
+    stage.appendChild(node);
+    return node;
+  }
+
+  function drop(gift) {
+    if (breaking) return;
+    if (gifts.length >= MAX_BODIES) return;
+    const x = 20 + Math.random() * (W - 40);
+    const r = gift.size / 2;
+    const body = Bodies.circle(x, 14, r * 0.9, { restitution: 0.25, friction: 0.04, density: 0.002 });
+    Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
+    World.add(world, body);
+    gifts.push({ body, node: addGiftNode(gift.size, gift.emoji), born: performance.now(), size: gift.size });
+  }
+
+  function giftPlay(g) {
+    total++;
+    diamonds += g.diamonds;
+    drop(g);
+    if (g.diamonds >= BIG) {
+      // Un gros cadeau casse le bocal après un court délai.
+      setTimeout(() => shatter("gros cadeau"), 500);
+    }
+    lastLines.unshift(`<div><b>${g.name}</b> · ${g.diamonds} diamant${g.diamonds > 1 ? "s" : ""}</div>`);
+    lastLines = lastLines.slice(0, 5);
+    logEl.innerHTML = lastLines.join("");
+    updateStats();
+  }
+
+  function shatter(reason) {
+    if (breaking) return;
+    breaking = true;
+    breaks++;
+    stage.classList.add("broken");
+    flash.classList.add("on");
+    // On retire les parois : les cadeaux s'échappent.
+    World.remove(world, walls);
+    gifts.forEach(({ body }) => {
+      Body.setVelocity(body, { x: (Math.random() - 0.5) * 14, y: -4 - Math.random() * 6 });
+    });
+    lastLines.unshift(`<div><b>Bocal cassé</b> (${reason})</div>`);
+    lastLines = lastLines.slice(0, 5);
+    logEl.innerHTML = lastLines.join("");
+    updateStats();
+    setTimeout(() => {
+      flash.classList.remove("on");
+      clearAll();
+      addWalls();
+      stage.classList.remove("broken");
+      breaking = false;
+    }, 1400);
+  }
+
+  function clearAll() {
+    gifts.forEach(({ body, node }) => { World.remove(world, body); node.remove(); });
+    gifts = [];
+  }
+
+  function updateStats() {
+    el("count").textContent = total;
+    el("diamonds").textContent = diamonds;
+    el("breaks").textContent = breaks;
+  }
+
+  // Boucle : physique + positionnement des emojis + détection de débordement.
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(33, now - last);
+    last = now;
+    Engine.update(engine, dt);
+    const t = performance.now();
+    let overflow = false;
+    for (const g of gifts) {
+      const { x, y } = g.body.position;
+      const r = g.size / 2;
+      g.node.style.transform = `translate(${x - r}px, ${y - r}px) rotate(${g.body.angle}rad)`;
+      if (!breaking && y < 60 && t - g.born > OVERFLOW_MS) overflow = true;
+    }
+    if (overflow) shatter("débordement");
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Boutons cadeaux.
+  const giftsBox = el("gifts");
+  GIFTS.forEach((g) => {
+    const b = document.createElement("button");
+    b.textContent = `${g.emoji} ${g.name} (${g.diamonds})`;
+    b.addEventListener("click", () => giftPlay(g));
+    giftsBox.appendChild(b);
+  });
+
+  // Mode auto : un cadeau aléatoire toutes les 900 ms.
+  const autoBtn = el("auto");
+  autoBtn.addEventListener("click", () => {
+    auto = !auto;
+    autoBtn.setAttribute("aria-pressed", String(auto));
+    autoBtn.textContent = `Mode auto : ${auto ? "on" : "off"}`;
+    if (auto) {
+      autoTimer = setInterval(() => {
+        const pool = GIFTS.slice(0, 4);   // pas de gros cadeau en auto
+        giftPlay(pool[Math.floor(Math.random() * pool.length)]);
+      }, 900);
+    } else {
+      clearInterval(autoTimer);
+    }
+  });
+
+  el("reset").addEventListener("click", () => {
+    clearAll();
+    total = 0; diamonds = 0; breaks = 0;
+    lastLines = [];
+    logEl.innerHTML = `<div>En attente d'un cadeau…</div>`;
+    updateStats();
+  });
+})();
+</script>
