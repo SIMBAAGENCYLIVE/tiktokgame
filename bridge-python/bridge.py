@@ -15,6 +15,7 @@ from TikTokLive.events import ConnectEvent, DisconnectEvent, CommentEvent, GiftE
 PORT = int(os.environ.get("PORT", "8080"))
 PAGE = (Path(__file__).parent / "public" / "index.html").read_bytes()
 PAGE_VERTICAL = (Path(__file__).parent / "public" / "vertical.html").read_bytes()
+PAGE_ACCUEIL = (Path(__file__).parent / "public" / "accueil.html").read_bytes()
 
 clients = set()                 # pages connectées
 last_status = "En attente d'un pseudo TikTok."
@@ -116,7 +117,11 @@ async def connect_to(name):
     current_task = asyncio.create_task(run())
 
 
-async def index(request):
+async def accueil(request):
+    return web.Response(body=PAGE_ACCUEIL, content_type="text/html", charset="utf-8")
+
+
+async def ballons(request):
     return web.Response(body=PAGE, content_type="text/html", charset="utf-8")
 
 
@@ -145,7 +150,8 @@ async def ws_handler(request):
 
 async def main():
     app = web.Application()
-    app.router.add_get("/", index)
+    app.router.add_get("/", accueil)
+    app.router.add_get("/ballons", ballons)
     app.router.add_get("/vertical", vertical)
     app.router.add_get("/ws", ws_handler)
     runner = web.AppRunner(app)
