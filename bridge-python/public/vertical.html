@@ -5,26 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Arène verticale</title>
 <style>
-/* Format vertical 9:16 pour un live TikTok. Les contrôles sont masqués en mode #overlay. */
+/* Format 9:16 pour un live TikTok. En mode #overlay, seul le rendu reste visible. */
 :root { --bg: #eef1f6; --panel: #ffffff; --fg: #131722; --muted: #5a6276; --line: #d9deea; --accent: #e8590c; color-scheme: light; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
 }
 :root[data-theme="dark"] { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
+
 body {
   margin: 0; background: var(--bg); color: var(--fg);
   font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 16px;
 }
 .wrap { max-width: 460px; margin: 0 auto; min-width: 0; }
-.stage { width: 100%; aspect-ratio: 9 / 16; background: #07080d; border-radius: 14px; overflow: hidden; position: relative; }
-.stage canvas { display: block; width: 100%; height: 100%; }
+.stage { width: 100%; aspect-ratio: 9 / 16; background: #07080d; border-radius: 14px; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 12px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .field { flex: 1 1 180px; display: grid; gap: 4px; min-width: 0; }
 label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-input {
+input[type="text"] {
   font: inherit; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
   background: var(--bg); color: var(--fg); width: 100%; min-width: 0;
 }
@@ -34,30 +37,30 @@ input {
 }
 .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
 .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.status { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
-.hidden-ui { }
+.status { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+
 html.is-overlay, html.is-overlay body { background: transparent; padding: 0; }
-html.is-overlay .panel, html.is-overlay .intro { display: none; }
+html.is-overlay .panel { display: none; }
 html.is-overlay .wrap { max-width: none; }
 html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="stage"><canvas id="c" width="1080" height="1920"></canvas></div>
+  <div class="stage"><canvas id="c" width="1080" height="1920" role="img" aria-label="Arène verticale : les viewers tournent autour de la pierre centrale"></canvas></div>
 
-  <div class="panel intro">
+  <div class="panel">
     <div class="row">
       <div class="field">
         <label for="user">Pseudo TikTok (sans @)</label>
-        <input id="user" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+        <input id="user" type="text" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
       </div>
       <button class="btn primary" id="connectBtn" type="button">Connecter</button>
     </div>
     <div class="row" style="margin-top:12px">
       <button class="btn" id="simBtn" type="button">Simuler</button>
       <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)">
-        <input id="voice" type="checkbox" style="min-height:auto;width:auto"> Voix de remerciement
+        <input id="voice" type="checkbox"> Voix de remerciement
       </label>
     </div>
     <p class="status" id="status">Non connecté.</p>
@@ -65,31 +68,78 @@ html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
 </div>
 
 <script>
+/* ==================================================================
+   Constantes
+   ================================================================== */
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const W = 1080, H = 1920;
-const CX = 540, CY = 1080;          // centre de l'arène
-const R_OUT = 430, R_IN = 150;      // rayons : extérieur (débutants) et intérieur (meilleurs)
+const CX = 540, CY = 1180;             // centre de l'arène
+const R_OUT = 430, R_IN = 140;         // anneau extérieur (débutants) et intérieur (meilleurs)
+const Y_SQUASH = 0.55;                 // aplatissement de l'anneau pour l'effet perspective
 const MAX_CHARS = 80;
+const TIERS = [                        // effets par valeur de cadeau (en diamants)
+  { min: 50, name: 'Pluie de lumière', color: '#fff6c8' },
+  { min: 10, name: 'Brume',            color: '#cfe6ff' },
+  { min: 5,  name: 'Eau',              color: '#5ec8ff' },
+  { min: 1,  name: 'Parfum',           color: '#ffd166' },
+];
 const SIM_NAMES = ['Lina', 'Max', 'Yanis', 'Océane', 'Tom', 'Inès', 'Léo', 'Sami', 'Zoé', 'Nina'];
 
-const chars = new Map();       // pseudo -> personnage
+/* ==================================================================
+   État
+   ================================================================== */
+const chars = new Map();     // pseudo -> personnage
+const images = new Map();    // url -> { img, ok }
 let particles = [];
-let banner = null;             // { text, until }
+let banner = null;           // bandeau de cadeau { text, until, color }
+let welcomes = [];           // bannières de bienvenue { text, until }
 let statusText = 'Non connecté.';
 
-// ---------- Personnages ----------
+/* ==================================================================
+   Outils
+   ================================================================== */
 function hueOf(name) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return h % 360;
 }
 
-function ensureChar(user) {
+function avatarImage(url) {
+  if (!url) return null;
+  let entry = images.get(url);
+  if (!entry) {
+    const img = new Image();
+    entry = { img, ok: false };
+    img.onload = () => { entry.ok = true; };
+    img.src = url;
+    images.set(url, entry);
+  }
+  return entry.ok ? entry.img : null;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function fitText(text, max) {
+  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+}
+
+/* ==================================================================
+   Personnages et points
+   ================================================================== */
+function ensureChar(user, avatar) {
   let c = chars.get(user);
   if (!c) {
     c = {
-      user, score: 0, r: R_OUT,
+      user, avatar: avatar || '', score: 0, r: R_OUT,
       angle: Math.random() * Math.PI * 2,
       speed: (0.10 + Math.random() * 0.08) * (Math.random() < 0.5 ? 1 : -1),
       hue: hueOf(user), bubble: '', bubbleUntil: 0,
@@ -100,12 +150,10 @@ function ensureChar(user) {
       for (const x of chars.values()) if (!low || x.score < low.score) low = x;
       if (low) chars.delete(low.user);
     }
+  } else if (avatar && !c.avatar) {
+    c.avatar = avatar;
   }
   return c;
-}
-
-function addPoints(user, pts) {
-  ensureChar(user).score += pts;
 }
 
 function targetRadius(c) {
@@ -113,17 +161,21 @@ function targetRadius(c) {
   return R_OUT - t * (R_OUT - R_IN);
 }
 
-// ---------- Effets de cadeaux (4 niveaux, comme le jeu d'origine) ----------
-function spawn(p) { particles.push(Object.assign({ vx: 0, vy: 0, g: 0, life: 1, max: 1, size: 6, color: '#fff' }, p)); }
+/* ==================================================================
+   Effets de cadeaux
+   ================================================================== */
+function spawn(p) {
+  particles.push(Object.assign({ vx: 0, vy: 0, g: 0, life: 1, max: 1, size: 6, color: '#fff' }, p));
+}
 
-function effect(diamonds) {
-  if (diamonds >= 50) {                          // pluie de lumière
-    for (let i = 0; i < 120; i++) spawn({ x: Math.random() * W, y: -20, vy: 500 + Math.random() * 400, g: 0, life: 2.5, max: 2.5, size: 3, color: '#fff6c8' });
-  } else if (diamonds >= 10) {                   // brume
-    for (let i = 0; i < 30; i++) spawn({ x: CX + (Math.random() - 0.5) * 500, y: CY + (Math.random() - 0.5) * 500, vx: (Math.random() - 0.5) * 60, vy: -20, life: 2, max: 2, size: 30 + Math.random() * 40, color: 'rgba(220,235,255,0.25)' });
-  } else if (diamonds >= 5) {                    // eau
+function effectFor(diamonds) {
+  if (diamonds >= 50) {
+    for (let i = 0; i < 140; i++) spawn({ x: Math.random() * W, y: -20, vy: 500 + Math.random() * 400, life: 2.5, max: 2.5, size: 3, color: '#fff6c8' });
+  } else if (diamonds >= 10) {
+    for (let i = 0; i < 30; i++) spawn({ x: CX + (Math.random() - 0.5) * 520, y: CY + (Math.random() - 0.5) * 360, vx: (Math.random() - 0.5) * 60, vy: -20, life: 2, max: 2, size: 30 + Math.random() * 40, color: 'rgba(220,235,255,0.25)' });
+  } else if (diamonds >= 5) {
     for (let i = 0; i < 60; i++) spawn({ x: Math.random() * W, y: -10, vy: 350 + Math.random() * 200, g: 300, life: 2, max: 2, size: 5, color: '#5ec8ff' });
-  } else {                                       // parfum : étincelles dorées au centre
+  } else {
     for (let i = 0; i < 25; i++) {
       const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 160;
       spawn({ x: CX, y: CY, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1.2, max: 1.2, size: 4, color: '#ffd166' });
@@ -131,17 +183,14 @@ function effect(diamonds) {
   }
 }
 
-// ---------- Boucle de dessin ----------
-let last = performance.now();
-function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  update(dt);
-  draw(now);
-  requestAnimationFrame(frame);
+function tierFor(diamonds) {
+  return TIERS.find((t) => diamonds >= t.min) || TIERS[TIERS.length - 1];
 }
 
-function update(dt) {
+/* ==================================================================
+   Mise à jour et dessin
+   ================================================================== */
+function update(dt, now) {
   for (const c of chars.values()) {
     c.angle += c.speed * dt;
     c.r += (targetRadius(c) - c.r) * Math.min(1, dt * 2);
@@ -153,78 +202,103 @@ function update(dt) {
     p.y += p.vy * dt;
   }
   particles = particles.filter((p) => p.life > 0 && p.y < H + 50);
+  welcomes = welcomes.filter((w) => now < w.until);
 }
 
-function draw(now) {
-  // Fond
+function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#0d1020');
   g.addColorStop(1, '#1b1630');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
+}
 
-  // Anneaux de l'arène
+function drawArena() {
   ctx.save();
   ctx.translate(CX, CY);
-  ctx.scale(1, 0.6);
+  ctx.scale(1, Y_SQUASH);
   for (const r of [R_OUT, (R_OUT + R_IN) / 2, R_IN]) {
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,209,102,0.18)';
+    ctx.strokeStyle = 'rgba(255,209,102,0.2)';
     ctx.lineWidth = 3;
     ctx.stroke();
   }
   ctx.restore();
 
-  // Centre neutre (pierre dorée)
+  // Pierre centrale, neutre, avec un liseré doré
   ctx.fillStyle = '#1a1a24';
   ctx.strokeStyle = '#ffd166';
   ctx.lineWidth = 6;
   ctx.fillRect(CX - 80, CY - 80, 160, 160);
   ctx.strokeRect(CX - 80, CY - 80, 160, 160);
+}
 
-  // Personnages, triés par profondeur
-  const list = [...chars.values()].map((c) => {
-    const y = CY + Math.sin(c.angle) * c.r * 0.6;
-    const x = CX + Math.cos(c.angle) * c.r;
-    return { c, x, y };
-  }).sort((a, b) => a.y - b.y);
+function drawAvatar(c, x, y, r) {
+  const img = avatarImage(c.avatar);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  if (img) {
+    ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+  } else {
+    ctx.fillStyle = `hsl(${c.hue} 70% 55%)`;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${Math.round(r * 1.1)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.user.charAt(0).toUpperCase(), x, y + 2);
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function drawLabel(text, x, y) {
+  ctx.font = '600 22px system-ui, sans-serif';
+  const w = ctx.measureText(text).width + 22;
+  ctx.fillStyle = 'rgba(20,16,34,0.82)';
+  roundRect(x - w / 2, y, w, 30, 15);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y + 15);
+}
+
+function drawBubble(text, x, y) {
+  ctx.font = '500 24px system-ui, sans-serif';
+  const w = Math.min(420, ctx.measureText(text).width + 28);
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  roundRect(x - w / 2, y - 60, w, 40, 12);
+  ctx.fill();
+  ctx.fillStyle = '#131722';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y - 40);
+}
+
+function drawCharacters(now) {
+  const list = [...chars.values()].map((c) => ({
+    c,
+    x: CX + Math.cos(c.angle) * c.r,
+    y: CY + Math.sin(c.angle) * c.r * Y_SQUASH,
+  })).sort((a, b) => a.y - b.y);
 
   for (const { c, x, y } of list) {
     const bob = Math.sin(now / 300 + c.angle) * 4;
-    ctx.beginPath();
-    ctx.arc(x, y + bob, 26, 0, Math.PI * 2);
-    ctx.fillStyle = `hsl(${c.hue} 70% 55%)`;
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 26px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(c.user.charAt(0).toUpperCase(), x, y + bob);
-
-    ctx.font = '600 22px system-ui, sans-serif';
-    ctx.textBaseline = 'top';
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    ctx.strokeText(c.user, x, y + bob + 32);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(c.user, x, y + bob + 32);
-
-    if (c.bubble && now < c.bubbleUntil) {
-      ctx.font = '500 24px system-ui, sans-serif';
-      const w = Math.min(420, ctx.measureText(c.bubble).width + 28);
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.fillRect(x - w / 2, y + bob - 70, w, 40);
-      ctx.fillStyle = '#131722';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(c.bubble, x, y + bob - 50);
-    }
+    drawAvatar(c, x, y + bob, 28);
+    drawLabel(fitText(c.user, 14), x, y + bob + 34);
+    if (c.bubble && now < c.bubbleUntil) drawBubble(c.bubble, x, y + bob);
   }
+}
 
-  // Particules
+function drawParticles() {
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.max);
     ctx.fillStyle = p.color;
@@ -233,46 +307,141 @@ function draw(now) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  // Classement (top 5)
-  const top = [...chars.values()].sort((a, b) => b.score - a.score).slice(0, 5);
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.fillRect(40, 150, 420, 60 + top.length * 52);
-  ctx.fillStyle = '#ffd166';
-  ctx.font = '700 28px system-ui, sans-serif';
-  ctx.fillText('CLASSEMENT', 62, 164);
-  top.forEach((c, i) => {
-    const y = 210 + i * 52;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 24px system-ui, sans-serif';
-    ctx.fillText(`${i + 1}. ${c.user}`, 62, y);
-    ctx.textAlign = 'right';
-    ctx.fillText(String(Math.floor(c.score)), 440, y);
-    ctx.textAlign = 'left';
-  });
-
-  // Bandeau de cadeau
-  if (banner && now < banner.until) {
-    ctx.fillStyle = 'rgba(232,89,12,0.92)';
-    ctx.fillRect(40, H - 260, W - 80, 90);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 32px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(banner.text, W / 2, H - 215);
-  }
-
-  // Statut (en haut à droite, en petit)
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '500 20px system-ui, sans-serif';
-  ctx.fillText(statusText, W - 40, 40);
 }
 
-// ---------- Événements (mêmes messages que la version précédente) ----------
+function drawHeader() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '800 64px system-ui, sans-serif';
+  ctx.fillText('ARÈNE DU LIVE', W / 2, 90);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '500 26px system-ui, sans-serif';
+  ctx.fillText('Commente, like et envoie des cadeaux pour monter vers la pierre', W / 2, 150);
+}
+
+function drawLeaderboard() {
+  const top = [...chars.values()].sort((a, b) => b.score - a.score).slice(0, 5);
+  const x = 40, y = 200, w = 470, rowH = 76;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  roundRect(x, y, w, 70 + rowH * 5, 18);
+  ctx.fill();
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 26px system-ui, sans-serif';
+  ctx.fillText('CLASSEMENT', x + 24, y + 36);
+
+  top.forEach((c, i) => {
+    const ry = y + 70 + i * rowH + rowH / 2;
+    drawAvatar(c, x + 52, ry, 26);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 26px system-ui, sans-serif';
+    ctx.fillText(`${i + 1}. ${fitText(c.user, 16)}`, x + 94, ry);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '700 26px system-ui, sans-serif';
+    ctx.fillText(String(Math.floor(c.score)), x + w - 24, ry);
+  });
+}
+
+function drawWelcomes(now) {
+  const x = W - 40, w = 470;
+  welcomes.slice(-3).forEach((wel, i) => {
+    const y = 200 + i * 70;
+    const alpha = Math.min(1, (wel.until - now) / 800);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    roundRect(x - w, y, w, 56, 14);
+    ctx.fill();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 24px system-ui, sans-serif';
+    ctx.fillText(fitText(wel.text, 30), x - w + 20, y + 28);
+    ctx.globalAlpha = 1;
+  });
+}
+
+function drawGiftBanner(now) {
+  if (!banner || now >= banner.until) return;
+  ctx.fillStyle = banner.color;
+  roundRect(40, H - 440, W - 80, 84, 18);
+  ctx.fill();
+  ctx.fillStyle = '#131722';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 32px system-ui, sans-serif';
+  ctx.fillText(banner.text, W / 2, H - 398);
+}
+
+function drawTierTable() {
+  const x = 40, y = H - 320, w = W - 80, h = 280;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  roundRect(x, y, w, h, 20);
+  ctx.fill();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 28px system-ui, sans-serif';
+  ctx.fillText('EFFETS DES CADEAUX', W / 2, y + 40);
+
+  const cols = [...TIERS].reverse();
+  const colW = (w - 40) / cols.length;
+  cols.forEach((t, i) => {
+    const cx = x + 20 + colW * i + colW / 2;
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.arc(cx, y + 116, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 22px system-ui, sans-serif';
+    ctx.fillText(t.name, cx, y + 170);
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = '500 20px system-ui, sans-serif';
+    ctx.fillText(`${t.min}+ diamants`, cx, y + 204);
+  });
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '500 20px system-ui, sans-serif';
+  ctx.fillText('Chat : 1 point · Like : 0,1 point · Cadeau : 5 points par diamant', W / 2, y + 258);
+}
+
+function drawStatus() {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '500 20px system-ui, sans-serif';
+  ctx.fillText(statusText, 40, 16);
+}
+
+function draw(now) {
+  drawBackground();
+  drawArena();
+  drawCharacters(now);
+  drawParticles();
+  drawHeader();
+  drawLeaderboard();
+  drawWelcomes(now);
+  drawGiftBanner(now);
+  drawTierTable();
+  drawStatus();
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  update(dt, now);
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+/* ==================================================================
+   Événements (mêmes messages que le programme de liaison)
+   ================================================================== */
 function speak(text) {
   if (!document.getElementById('voice').checked || !('speechSynthesis' in window)) return;
   const u = new SpeechSynthesisUtterance(text);
@@ -283,19 +452,21 @@ function speak(text) {
 function onEvent(d) {
   const now = performance.now();
   if (d.type === 'chat') {
-    const c = ensureChar(d.user);
+    const c = ensureChar(d.user, d.avatar);
     c.score += 1;
-    c.bubble = d.text.slice(0, 40);
+    c.bubble = fitText(d.text, 40);
     c.bubbleUntil = now + 3500;
   } else if (d.type === 'like') {
-    addPoints(d.user, 0.1 * (d.count || 1));
+    ensureChar(d.user, d.avatar).score += 0.1 * (d.count || 1);
   } else if (d.type === 'member') {
-    ensureChar(d.user);
+    ensureChar(d.user, d.avatar);
+    welcomes.push({ text: `Bienvenue ${d.user}`, until: now + 4500 });
   } else if (d.type === 'gift') {
     const diamonds = d.diamonds || 1;
-    addPoints(d.user, diamonds * 5);
-    effect(diamonds);
-    banner = { text: `${d.user} · ${d.giftName} ×${diamonds}`, until: now + 4000 };
+    const tier = tierFor(diamonds);
+    ensureChar(d.user, d.avatar).score += diamonds * 5;
+    effectFor(diamonds);
+    banner = { text: `${d.user} · ${d.giftName} ×${diamonds}`, until: now + 4000, color: tier.color };
     speak(`Merci ${d.user} pour ton cadeau`);
   } else if (d.type === 'status') {
     statusText = d.text;
@@ -303,8 +474,11 @@ function onEvent(d) {
   }
 }
 
-// ---------- Connexion au programme de liaison ----------
+/* ==================================================================
+   Connexion au programme de liaison et simulation
+   ================================================================== */
 let socket = null;
+
 function connectBridge() {
   try {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -325,22 +499,26 @@ document.getElementById('connectBtn').addEventListener('click', () => {
   }
 });
 
-// ---------- Simulation (sans live) ----------
 let simTimer = null;
 document.getElementById('simBtn').addEventListener('click', () => {
-  if (simTimer) { clearInterval(simTimer); simTimer = null; document.getElementById('simBtn').textContent = 'Simuler'; return; }
-  document.getElementById('simBtn').textContent = 'Arrêter la simulation';
+  const btn = document.getElementById('simBtn');
+  if (simTimer) {
+    clearInterval(simTimer);
+    simTimer = null;
+    btn.textContent = 'Simuler';
+    return;
+  }
+  btn.textContent = 'Arrêter la simulation';
   simTimer = setInterval(() => {
     const user = SIM_NAMES[Math.floor(Math.random() * SIM_NAMES.length)];
     const r = Math.random();
-    if (r < 0.4) onEvent({ type: 'chat', user, text: 'Bonjour à tous !' });
-    else if (r < 0.7) onEvent({ type: 'like', user, count: 5 + Math.floor(Math.random() * 20) });
-    else if (r < 0.9) onEvent({ type: 'member', user });
+    if (r < 0.35) onEvent({ type: 'chat', user, text: 'Bonjour à tous !' });
+    else if (r < 0.6) onEvent({ type: 'like', user, count: 5 + Math.floor(Math.random() * 20) });
+    else if (r < 0.75) onEvent({ type: 'member', user });
     else onEvent({ type: 'gift', user, giftName: 'Rose', diamonds: [1, 5, 10, 50][Math.floor(Math.random() * 4)] });
   }, 700);
 });
 
-// Mode overlay pour LIVE Studio : #overlay masque les contrôles.
 function syncOverlay() {
   document.documentElement.classList.toggle('is-overlay', location.hash === '#overlay');
 }

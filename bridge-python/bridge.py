@@ -33,6 +33,16 @@ async def broadcast(obj):
             clients.discard(ws)
 
 
+def avatar_of(user):
+    """URL de la photo de profil, ou chaîne vide si elle n'est pas disponible."""
+    try:
+        thumb = getattr(user, "avatar_thumb", None)
+        urls = getattr(thumb, "url_list", None) or []
+        return urls[0] if urls else ""
+    except Exception:
+        return ""
+
+
 def clean(name):
     n = (name or "").strip().lstrip("@")
     return n if re.fullmatch(r"[A-Za-z0-9._]{2,24}", n) else ""
@@ -57,13 +67,13 @@ async def connect_to(name):
         await broadcast({"type": "status", "text": "Déconnecté du live"})
 
     async def on_comment(event: CommentEvent):
-        await broadcast({"type": "chat", "user": event.user.unique_id, "text": event.comment})
+        await broadcast({"type": "chat", "user": event.user.unique_id, "avatar": avatar_of(event.user), "text": event.comment})
 
     async def on_join(event: JoinEvent):
-        await broadcast({"type": "member", "user": event.user.unique_id})
+        await broadcast({"type": "member", "user": event.user.unique_id, "avatar": avatar_of(event.user)})
 
     async def on_like(event: LikeEvent):
-        await broadcast({"type": "like", "user": event.user.unique_id, "count": getattr(event, "count", 1) or 1})
+        await broadcast({"type": "like", "user": event.user.unique_id, "avatar": avatar_of(event.user), "count": getattr(event, "count", 1) or 1})
 
     async def on_gift(event: GiftEvent):
         # Les cadeaux en série arrivent plusieurs fois : on ne compte qu'à la fin de la série.
@@ -74,6 +84,7 @@ async def connect_to(name):
         await broadcast({
             "type": "gift",
             "user": event.user.unique_id,
+            "avatar": avatar_of(event.user),
             "giftName": event.gift.name,
             "diamonds": value * count,
         })
