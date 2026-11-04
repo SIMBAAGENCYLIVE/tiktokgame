@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arène verticale</title>
+<style>
+/* Format vertical 9:16 pour un live TikTok. Les contrôles sont masqués en mode #overlay. */
+:root { --bg: #eef1f6; --panel: #ffffff; --fg: #131722; --muted: #5a6276; --line: #d9deea; --accent: #e8590c; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0c0e14; --panel: #161a25; --fg: #eceff6; --muted: #9aa3b8; --line: #2a3042; --accent: #ff8a3d; color-scheme: dark; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+}
+.wrap { max-width: 460px; margin: 0 auto; min-width: 0; }
+.stage { width: 100%; aspect-ratio: 9 / 16; background: #07080d; border-radius: 14px; overflow: hidden; position: relative; }
+.stage canvas { display: block; width: 100%; height: 100%; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 12px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { flex: 1 1 180px; display: grid; gap: 4px; min-width: 0; }
+label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+input {
+  font: inherit; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--fg); width: 100%; min-width: 0;
+}
+.btn {
+  font: inherit; font-weight: 600; min-height: 44px; padding: 8px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.hidden-ui { }
+html.is-overlay, html.is-overlay body { background: transparent; padding: 0; }
+html.is-overlay .panel, html.is-overlay .intro { display: none; }
+html.is-overlay .wrap { max-width: none; }
+html.is-overlay .stage { border-radius: 0; aspect-ratio: auto; height: 100vh; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage"><canvas id="c" width="1080" height="1920"></canvas></div>
+
+  <div class="panel intro">
+    <div class="row">
+      <div class="field">
+        <label for="user">Pseudo TikTok (sans @)</label>
+        <input id="user" maxlength="24" autocomplete="off" placeholder="pseudo_du_createur">
+      </div>
+      <button class="btn primary" id="connectBtn" type="button">Connecter</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="simBtn" type="button">Simuler</button>
+      <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg)">
+        <input id="voice" type="checkbox" style="min-height:auto;width:auto"> Voix de remerciement
+      </label>
+    </div>
+    <p class="status" id="status">Non connecté.</p>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1080, H = 1920;
+const CX = 540, CY = 1080;          // centre de l'arène
+const R_OUT = 430, R_IN = 150;      // rayons : extérieur (débutants) et intérieur (meilleurs)
+const MAX_CHARS = 80;
+const SIM_NAMES = ['Lina', 'Max', 'Yanis', 'Océane', 'Tom', 'Inès', 'Léo', 'Sami', 'Zoé', 'Nina'];
+
+const chars = new Map();       // pseudo -> personnage
+let particles = [];
+let banner = null;             // { text, until }
+let statusText = 'Non connecté.';
+
+// ---------- Personnages ----------
+function hueOf(name) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % 360;
+}
+
+function ensureChar(user) {
+  let c = chars.get(user);
+  if (!c) {
+    c = {
+      user, score: 0, r: R_OUT,
+      angle: Math.random() * Math.PI * 2,
+      speed: (0.10 + Math.random() * 0.08) * (Math.random() < 0.5 ? 1 : -1),
+      hue: hueOf(user), bubble: '', bubbleUntil: 0,
+    };
+    chars.set(user, c);
+    if (chars.size > MAX_CHARS) {
+      let low = null;
+      for (const x of chars.values()) if (!low || x.score < low.score) low = x;
+      if (low) chars.delete(low.user);
+    }
+  }
+  return c;
+}
+
+function addPoints(user, pts) {
+  ensureChar(user).score += pts;
+}
+
+function targetRadius(c) {
+  const t = Math.min(1, c.score / 150);
+  return R_OUT - t * (R_OUT - R_IN);
+}
+
+// ---------- Effets de cadeaux (4 niveaux, comme le jeu d'origine) ----------
+function spawn(p) { particles.push(Object.assign({ vx: 0, vy: 0, g: 0, life: 1, max: 1, size: 6, color: '#fff' }, p)); }
+
+function effect(diamonds) {
+  if (diamonds >= 50) {                          // pluie de lumière
+    for (let i = 0; i < 120; i++) spawn({ x: Math.random() * W, y: -20, vy: 500 + Math.random() * 400, g: 0, life: 2.5, max: 2.5, size: 3, color: '#fff6c8' });
+  } else if (diamonds >= 10) {                   // brume
+    for (let i = 0; i < 30; i++) spawn({ x: CX + (Math.random() - 0.5) * 500, y: CY + (Math.random() - 0.5) * 500, vx: (Math.random() - 0.5) * 60, vy: -20, life: 2, max: 2, size: 30 + Math.random() * 40, color: 'rgba(220,235,255,0.25)' });
+  } else if (diamonds >= 5) {                    // eau
+    for (let i = 0; i < 60; i++) spawn({ x: Math.random() * W, y: -10, vy: 350 + Math.random() * 200, g: 300, life: 2, max: 2, size: 5, color: '#5ec8ff' });
+  } else {                                       // parfum : étincelles dorées au centre
+    for (let i = 0; i < 25; i++) {
+      const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 160;
+      spawn({ x: CX, y: CY, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1.2, max: 1.2, size: 4, color: '#ffd166' });
+    }
+  }
+}
+
+// ---------- Boucle de dessin ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  update(dt);
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+function update(dt) {
+  for (const c of chars.values()) {
+    c.angle += c.speed * dt;
+    c.r += (targetRadius(c) - c.r) * Math.min(1, dt * 2);
+  }
+  for (const p of particles) {
+    p.life -= dt;
+    p.vy += p.g * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
+  particles = particles.filter((p) => p.life > 0 && p.y < H + 50);
+}
+
+function draw(now) {
+  // Fond
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#0d1020');
+  g.addColorStop(1, '#1b1630');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Anneaux de l'arène
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.scale(1, 0.6);
+  for (const r of [R_OUT, (R_OUT + R_IN) / 2, R_IN]) {
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,209,102,0.18)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Centre neutre (pierre dorée)
+  ctx.fillStyle = '#1a1a24';
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 6;
+  ctx.fillRect(CX - 80, CY - 80, 160, 160);
+  ctx.strokeRect(CX - 80, CY - 80, 160, 160);
+
+  // Personnages, triés par profondeur
+  const list = [...chars.values()].map((c) => {
+    const y = CY + Math.sin(c.angle) * c.r * 0.6;
+    const x = CX + Math.cos(c.angle) * c.r;
+    return { c, x, y };
+  }).sort((a, b) => a.y - b.y);
+
+  for (const { c, x, y } of list) {
+    const bob = Math.sin(now / 300 + c.angle) * 4;
+    ctx.beginPath();
+    ctx.arc(x, y + bob, 26, 0, Math.PI * 2);
+    ctx.fillStyle = `hsl(${c.hue} 70% 55%)`;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 26px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.user.charAt(0).toUpperCase(), x, y + bob);
+
+    ctx.font = '600 22px system-ui, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    ctx.strokeText(c.user, x, y + bob + 32);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(c.user, x, y + bob + 32);
+
+    if (c.bubble && now < c.bubbleUntil) {
+      ctx.font = '500 24px system-ui, sans-serif';
+      const w = Math.min(420, ctx.measureText(c.bubble).width + 28);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillRect(x - w / 2, y + bob - 70, w, 40);
+      ctx.fillStyle = '#131722';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(c.bubble, x, y + bob - 50);
+    }
+  }
+
+  // Particules
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Classement (top 5)
+  const top = [...chars.values()].sort((a, b) => b.score - a.score).slice(0, 5);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(40, 150, 420, 60 + top.length * 52);
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 28px system-ui, sans-serif';
+  ctx.fillText('CLASSEMENT', 62, 164);
+  top.forEach((c, i) => {
+    const y = 210 + i * 52;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 24px system-ui, sans-serif';
+    ctx.fillText(`${i + 1}. ${c.user}`, 62, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(String(Math.floor(c.score)), 440, y);
+    ctx.textAlign = 'left';
+  });
+
+  // Bandeau de cadeau
+  if (banner && now < banner.until) {
+    ctx.fillStyle = 'rgba(232,89,12,0.92)';
+    ctx.fillRect(40, H - 260, W - 80, 90);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 32px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(banner.text, W / 2, H - 215);
+  }
+
+  // Statut (en haut à droite, en petit)
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '500 20px system-ui, sans-serif';
+  ctx.fillText(statusText, W - 40, 40);
+}
+
+// ---------- Événements (mêmes messages que la version précédente) ----------
+function speak(text) {
+  if (!document.getElementById('voice').checked || !('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'fr-FR';
+  speechSynthesis.speak(u);
+}
+
+function onEvent(d) {
+  const now = performance.now();
+  if (d.type === 'chat') {
+    const c = ensureChar(d.user);
+    c.score += 1;
+    c.bubble = d.text.slice(0, 40);
+    c.bubbleUntil = now + 3500;
+  } else if (d.type === 'like') {
+    addPoints(d.user, 0.1 * (d.count || 1));
+  } else if (d.type === 'member') {
+    ensureChar(d.user);
+  } else if (d.type === 'gift') {
+    const diamonds = d.diamonds || 1;
+    addPoints(d.user, diamonds * 5);
+    effect(diamonds);
+    banner = { text: `${d.user} · ${d.giftName} ×${diamonds}`, until: now + 4000 };
+    speak(`Merci ${d.user} pour ton cadeau`);
+  } else if (d.type === 'status') {
+    statusText = d.text;
+    document.getElementById('status').textContent = d.text;
+  }
+}
+
+// ---------- Connexion au programme de liaison ----------
+let socket = null;
+function connectBridge() {
+  try {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    socket = new WebSocket(`${proto}://${location.host}/ws`);
+  } catch (e) { return; }
+  socket.onmessage = (msg) => {
+    try { onEvent(JSON.parse(msg.data)); } catch (e) { /* message ignoré */ }
+  };
+  socket.onclose = () => { socket = null; };
+}
+
+document.getElementById('connectBtn').addEventListener('click', () => {
+  const user = document.getElementById('user').value.trim();
+  if (socket && socket.readyState === 1) {
+    socket.send(JSON.stringify({ type: 'connect', user }));
+  } else {
+    document.getElementById('status').textContent = 'Programme de liaison introuvable. Ouvre la page depuis le programme.';
+  }
+});
+
+// ---------- Simulation (sans live) ----------
+let simTimer = null;
+document.getElementById('simBtn').addEventListener('click', () => {
+  if (simTimer) { clearInterval(simTimer); simTimer = null; document.getElementById('simBtn').textContent = 'Simuler'; return; }
+  document.getElementById('simBtn').textContent = 'Arrêter la simulation';
+  simTimer = setInterval(() => {
+    const user = SIM_NAMES[Math.floor(Math.random() * SIM_NAMES.length)];
+    const r = Math.random();
+    if (r < 0.4) onEvent({ type: 'chat', user, text: 'Bonjour à tous !' });
+    else if (r < 0.7) onEvent({ type: 'like', user, count: 5 + Math.floor(Math.random() * 20) });
+    else if (r < 0.9) onEvent({ type: 'member', user });
+    else onEvent({ type: 'gift', user, giftName: 'Rose', diamonds: [1, 5, 10, 50][Math.floor(Math.random() * 4)] });
+  }, 700);
+});
+
+// Mode overlay pour LIVE Studio : #overlay masque les contrôles.
+function syncOverlay() {
+  document.documentElement.classList.toggle('is-overlay', location.hash === '#overlay');
+}
+window.addEventListener('hashchange', syncOverlay);
+
+syncOverlay();
+connectBridge();
+requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

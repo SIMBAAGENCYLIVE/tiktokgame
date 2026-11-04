@@ -14,6 +14,7 @@ from TikTokLive.events import ConnectEvent, DisconnectEvent, CommentEvent, GiftE
 
 PORT = int(os.environ.get("PORT", "8080"))
 PAGE = (Path(__file__).parent / "public" / "index.html").read_bytes()
+PAGE_VERTICAL = (Path(__file__).parent / "public" / "vertical.html").read_bytes()
 
 clients = set()                 # pages connectées
 last_status = "En attente d'un pseudo TikTok."
@@ -101,6 +102,10 @@ async def index(request):
     return web.Response(body=PAGE, content_type="text/html", charset="utf-8")
 
 
+async def vertical(request):
+    return web.Response(body=PAGE_VERTICAL, content_type="text/html", charset="utf-8")
+
+
 async def ws_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
@@ -123,6 +128,7 @@ async def ws_handler(request):
 async def main():
     app = web.Application()
     app.router.add_get("/", index)
+    app.router.add_get("/vertical", vertical)
     app.router.add_get("/ws", ws_handler)
     runner = web.AppRunner(app)
     await runner.setup()
