@@ -129,6 +129,17 @@ async def vertical(request):
     return web.Response(body=PAGE_VERTICAL, content_type="text/html", charset="utf-8")
 
 
+BOCAL_DIR = Path(__file__).parent / "public" / "bocal"
+
+
+async def bocal_index(request):
+    return web.FileResponse(BOCAL_DIR / "index.html")
+
+
+async def bocal_redirect(request):
+    raise web.HTTPFound("/bocal/")
+
+
 async def ws_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
@@ -153,6 +164,9 @@ async def main():
     app.router.add_get("/", accueil)
     app.router.add_get("/ballons", ballons)
     app.router.add_get("/vertical", vertical)
+    app.router.add_get("/bocal", bocal_redirect)
+    app.router.add_get("/bocal/", bocal_index)
+    app.router.add_static("/bocal/", path=BOCAL_DIR, show_index=False)
     app.router.add_get("/ws", ws_handler)
     runner = web.AppRunner(app)
     await runner.setup()
